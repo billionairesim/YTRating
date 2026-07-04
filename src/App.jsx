@@ -36,6 +36,7 @@ function App() {
 
   const themes = [
     { id: 'default', name: 'Default', color: '#1a1a1a' },
+    { id: 'black', name: 'Black', color: '#000000' },
     { id: 'ocean', name: 'Ocean', color: '#1565c0' },
     { id: 'forest', name: 'Forest', color: '#2e7d32' },
     { id: 'sunset', name: 'Sunset', color: '#e65100' },

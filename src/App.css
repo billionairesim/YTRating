@@ -2,6 +2,7 @@
 :root, [data-theme="default"] {
   --primary: #1a1a1a;
   --primary-hover: #333;
+  --primary-text: #ffffff;
   --bg: #f5f5f5;
   --card-bg: white;
   --text: #1a1a1a;
@@ -16,9 +17,28 @@
   --star-color: #f5a623;
 }
 
+[data-theme="black"] {
+  --primary: #f0f0f0;
+  --primary-hover: #d0d0d0;
+  --primary-text: #000000;
+  --bg: #000000;
+  --card-bg: #111111;
+  --text: #f0f0f0;
+  --text-secondary: #b0b0b0;
+  --text-muted: #666666;
+  --border: #2a2a2a;
+  --chip-bg: #1a1a1a;
+  --analysis-bg: #1a1a1a;
+  --tab-bg: #1a1a1a;
+  --tab-hover: #2a2a2a;
+  --input-bg: #111111;
+  --star-color: #f5a623;
+}
+
 [data-theme="ocean"] {
   --primary: #1565c0;
   --primary-hover: #1976d2;
+  --primary-text: #ffffff;
   --bg: #e3f2fd;
   --card-bg: white;
   --text: #0d47a1;
@@ -36,6 +56,7 @@
 [data-theme="forest"] {
   --primary: #2e7d32;
   --primary-hover: #388e3c;
+  --primary-text: #ffffff;
   --bg: #e8f5e9;
   --card-bg: white;
   --text: #1b5e20;
@@ -53,6 +74,7 @@
 [data-theme="sunset"] {
   --primary: #e65100;
   --primary-hover: #f57c00;
+  --primary-text: #ffffff;
   --bg: #fff3e0;
   --card-bg: white;
   --text: #bf360c;
@@ -70,6 +92,7 @@
 [data-theme="berry"] {
   --primary: #7b1fa2;
   --primary-hover: #9c27b0;
+  --primary-text: #ffffff;
   --bg: #f3e5f5;
   --card-bg: white;
   --text: #4a148c;
@@ -87,6 +110,7 @@
 [data-theme="rose"] {
   --primary: #c62828;
   --primary-hover: #d32f2f;
+  --primary-text: #ffffff;
   --bg: #fbe9e7;
   --card-bg: white;
   --text: #b71c1c;
@@ -104,6 +128,7 @@
 [data-theme="midnight"] {
   --primary: #5c6bc0;
   --primary-hover: #7986cb;
+  --primary-text: #ffffff;
   --bg: #1a1a2e;
   --card-bg: #16213e;
   --text: #e0e0e0;
@@ -121,6 +146,7 @@
 [data-theme="teal"] {
   --primary: #00695c;
   --primary-hover: #00897b;
+  --primary-text: #ffffff;
   --bg: #e0f2f1;
   --card-bg: white;
   --text: #004d40;
@@ -199,7 +225,7 @@ body {
 
 .btn-primary {
   background: var(--primary);
-  color: white;
+  color: var(--primary-text);
 }
 
 .btn-primary:hover {
@@ -250,7 +276,7 @@ body {
 
 .folder-tab.active {
   background: var(--primary);
-  color: white;
+  color: var(--primary-text);
 }
 
 .folder-delete {
@@ -284,21 +310,21 @@ body {
 
 .folder-select {
   padding: 6px 10px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 12px;
-  color: #555;
-  background: #fafafa;
+  color: var(--text-secondary);
+  background: var(--input-bg);
   cursor: pointer;
   transition: border-color 0.15s;
 }
 
 .folder-select:hover {
-  border-color: #999;
+  border-color: var(--text-muted);
 }
 
 .folder-select:focus {
-  border-color: #1a1a1a;
+  border-color: var(--primary);
   outline: none;
 }
 
@@ -418,16 +444,16 @@ body {
   align-items: center;
   gap: 10px;
   padding: 16px;
-  border: 2px dashed #ddd;
+  border: 2px dashed var(--border);
   border-radius: 10px;
-  color: #999;
+  color: var(--text-muted);
   font-size: 14px;
   transition: all 0.15s;
 }
 
 .image-upload-placeholder:hover {
-  border-color: #aaa;
-  color: #666;
+  border-color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .upload-icon {
@@ -575,20 +601,20 @@ body {
 .add-image-btn {
   width: 280px;
   height: 60px;
-  border: 2px dashed #ddd;
+  border: 2px dashed var(--border);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #bbb;
+  color: var(--text-muted);
   font-size: 24px;
   transition: all 0.15s;
 }
 
 .add-image-btn:hover {
-  border-color: #999;
-  color: #666;
+  border-color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .video-title-section {
@@ -614,17 +640,18 @@ body {
 }
 
 .editable-title:hover {
-  background: #f0f0f0;
+  background: var(--tab-bg);
 }
 
 .edit-title-input {
   font-size: 18px;
   font-weight: 600;
   padding: 6px 10px;
-  border: 2px solid #1a1a1a;
+  border: 2px solid var(--primary);
   border-radius: 8px;
   width: 100%;
-  background: white;
+  background: var(--input-bg);
+  color: var(--text);
 }
 
 .play-link {
@@ -657,7 +684,7 @@ body {
 
 .avg-score {
   background: var(--primary);
-  color: white;
+  color: var(--primary-text);
   font-size: 14px;
   font-weight: 700;
   padding: 4px 10px;
@@ -961,7 +988,7 @@ body {
 /* Delete Button */
 .delete-btn {
   background: none;
-  color: #bbb;
+  color: var(--text-muted);
   font-size: 12px;
   padding: 6px 0;
   margin-top: 10px;
