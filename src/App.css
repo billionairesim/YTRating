@@ -21,17 +21,17 @@
   --primary: #f0f0f0;
   --primary-hover: #d0d0d0;
   --primary-text: #000000;
-  --bg: #000000;
-  --card-bg: #111111;
+  --bg: #0a0a0a;
+  --card-bg: #161616;
   --text: #f0f0f0;
-  --text-secondary: #b0b0b0;
-  --text-muted: #666666;
-  --border: #2a2a2a;
-  --chip-bg: #1a1a1a;
-  --analysis-bg: #1a1a1a;
-  --tab-bg: #1a1a1a;
-  --tab-hover: #2a2a2a;
-  --input-bg: #111111;
+  --text-secondary: #b8b8b8;
+  --text-muted: #6e6e6e;
+  --border: #2e2e2e;
+  --chip-bg: #1e1e1e;
+  --analysis-bg: #1c1c1c;
+  --tab-bg: #1e1e1e;
+  --tab-hover: #2e2e2e;
+  --input-bg: #141414;
   --star-color: #f5a623;
 }
 
