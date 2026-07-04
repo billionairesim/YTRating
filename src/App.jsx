@@ -487,24 +487,10 @@ function App() {
                     />
                     <button
                       className="thumbnail-remove"
-                      onClick={() => removeImageFromVideo(video.id, safeIdx)}
+                      onClick={(e) => { e.stopPropagation(); removeImageFromVideo(video.id, safeIdx) }}
                     >&times;</button>
 
-                    {images.length > 1 && (
-                      <div className="thumbnail-strip">
-                        {images.map((img, i) => (
-                          <img
-                            key={i}
-                            src={img}
-                            alt={`thumb ${i + 1}`}
-                            className={`strip-thumb ${i === safeIdx ? 'active' : ''}`}
-                            onClick={() => setImageIndex(prev => ({ ...prev, [video.id]: i }))}
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    <label className="add-image-overlay">
+                    <label className="add-image-corner" onClick={(e) => e.stopPropagation()}>
                       <span>+</span>
                       <input
                         type="file"
@@ -514,6 +500,20 @@ function App() {
                         className="file-input-hidden"
                       />
                     </label>
+
+                    {images.length > 1 && (
+                      <div className="thumbnail-strip">
+                        {images.map((img, i) => (
+                          <img
+                            key={i}
+                            src={img}
+                            alt={`thumb ${i + 1}`}
+                            className={`strip-thumb ${i === safeIdx ? 'active' : ''}`}
+                            onClick={(e) => { e.stopPropagation(); setImageIndex(prev => ({ ...prev, [video.id]: i })) }}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <label className="add-image-empty">
