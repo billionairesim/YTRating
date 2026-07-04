@@ -31,6 +31,7 @@ function App() {
   const [editingTitle, setEditingTitle] = useState(null)
   const [expandedAnalysis, setExpandedAnalysis] = useState({})
   const [imageIndex, setImageIndex] = useState({})
+  const [lightbox, setLightbox] = useState(null) // { videoId, index }
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('yt-rater-theme') || 'default'
   })
@@ -477,36 +478,32 @@ function App() {
                 const safeIdx = images.length > 0 ? currentIdx % images.length : 0
 
                 return images.length > 0 ? (
-                  <>
-                    <div className="video-thumbnail">
-                      <img src={images[safeIdx]} alt={`${video.title} ${safeIdx + 1}`} />
-                      <button
-                        className="thumbnail-remove"
-                        onClick={() => removeImageFromVideo(video.id, safeIdx)}
-                      >&times;</button>
+                  <div className="video-thumbnail">
+                    <img
+                      src={images[safeIdx]}
+                      alt={`${video.title} ${safeIdx + 1}`}
+                      onClick={() => setLightbox({ videoId: video.id, index: safeIdx })}
+                      className="thumbnail-clickable"
+                    />
+                    <button
+                      className="thumbnail-remove"
+                      onClick={() => removeImageFromVideo(video.id, safeIdx)}
+                    >&times;</button>
 
-                      {images.length > 1 && (
-                        <>
-                          <button
-                            className="slide-arrow slide-left"
-                            onClick={() => setImageIndex(prev => ({ ...prev, [video.id]: (safeIdx - 1 + images.length) % images.length }))}
-                          >&#8249;</button>
-                          <button
-                            className="slide-arrow slide-right"
-                            onClick={() => setImageIndex(prev => ({ ...prev, [video.id]: (safeIdx + 1) % images.length }))}
-                          >&#8250;</button>
-                          <div className="slide-dots">
-                            {images.map((_, i) => (
-                              <span
-                                key={i}
-                                className={`slide-dot ${i === safeIdx ? 'active' : ''}`}
-                                onClick={() => setImageIndex(prev => ({ ...prev, [video.id]: i }))}
-                              ></span>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
+                    {images.length > 1 && (
+                      <div className="thumbnail-strip">
+                        {images.map((img, i) => (
+                          <img
+                            key={i}
+                            src={img}
+                            alt={`thumb ${i + 1}`}
+                            className={`strip-thumb ${i === safeIdx ? 'active' : ''}`}
+                            onClick={() => setImageIndex(prev => ({ ...prev, [video.id]: i }))}
+                          />
+                        ))}
+                      </div>
+                    )}
+
                     <label className="add-image-overlay">
                       <span>+</span>
                       <input
@@ -517,7 +514,7 @@ function App() {
                         className="file-input-hidden"
                       />
                     </label>
-                  </>
+                  </div>
                 ) : (
                   <label className="add-image-empty">
                     <span>+</span>
@@ -697,6 +694,38 @@ function App() {
           </div>
         ))}
       </div>
+
+      {/* Lightbox */}
+      {lightbox && (() => {
+        const video = videos.find(v => v.id === lightbox.videoId)
+        if (!video) return null
+        const images = (video.images || [video.image]).filter(Boolean)
+        if (images.length === 0) return null
+        const idx = lightbox.index % images.length
+
+        return (
+          <div className="lightbox-overlay" onClick={() => setLightbox(null)}>
+            <div className="lightbox-content" onClick={e => e.stopPropagation()}>
+              <button className="lightbox-close" onClick={() => setLightbox(null)}>&times;</button>
+              <img src={images[idx]} alt={`${video.title} ${idx + 1}`} className="lightbox-img" />
+
+              {images.length > 1 && (
+                <>
+                  <button
+                    className="lightbox-arrow lightbox-left"
+                    onClick={() => setLightbox({ ...lightbox, index: (idx - 1 + images.length) % images.length })}
+                  >&#8249;</button>
+                  <button
+                    className="lightbox-arrow lightbox-right"
+                    onClick={() => setLightbox({ ...lightbox, index: (idx + 1) % images.length })}
+                  >&#8250;</button>
+                  <div className="lightbox-counter">{idx + 1} / {images.length}</div>
+                </>
+              )}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
