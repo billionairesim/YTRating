@@ -302,21 +302,11 @@ function App() {
       ? videos.filter(v => !v.folder)
       : videos.filter(v => v.folder === activeFolder)
 
-  const cycleTheme = () => {
-    const currentIndex = themes.findIndex(t => t.id === theme)
-    const nextIndex = (currentIndex + 1) % themes.length
-    setTheme(themes[nextIndex].id)
-  }
-
   return (
     <div className="app">
       <header className="header">
         <h1>YT Rater</h1>
         <div className="header-actions">
-          <button onClick={cycleTheme} className="btn theme-btn" title={`Theme: ${themes.find(t => t.id === theme)?.name}`}>
-            <span className="theme-dot" style={{ background: themes.find(t => t.id === theme)?.color }}></span>
-            {themes.find(t => t.id === theme)?.name}
-          </button>
           <button onClick={() => setShowAddFolder(true)} className="btn btn-secondary">
             + Folder
           </button>
