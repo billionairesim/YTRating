@@ -213,7 +213,21 @@ function App() {
     const avg = parseFloat(getAverage(video))
     const highest = entries.reduce((a, b) => b[1] > a[1] ? b : a)
     const lowest = entries.reduce((a, b) => b[1] < a[1] ? b : a)
+    const totalScore = entries.reduce((sum, [, v]) => sum + v, 0)
+    const maxPossible = entries.length * 5
+    const percentage = Math.round((totalScore / maxPossible) * 100)
 
+    // Consistency (std deviation)
+    const mean = totalScore / entries.length
+    const variance = entries.reduce((sum, [, v]) => sum + Math.pow(v - mean, 2), 0) / entries.length
+    const stdDev = Math.sqrt(variance)
+    let consistency = ''
+    if (stdDev <= 0.5) consistency = 'Very Consistent'
+    else if (stdDev <= 1) consistency = 'Consistent'
+    else if (stdDev <= 1.5) consistency = 'Mixed'
+    else consistency = 'Inconsistent'
+
+    // Verdict
     let verdict = ''
     if (avg >= 4.5) verdict = 'Excellent'
     else if (avg >= 3.5) verdict = 'Great'
@@ -221,7 +235,22 @@ function App() {
     else if (avg >= 1.5) verdict = 'Below Average'
     else verdict = 'Poor'
 
-    return { avg, highest, lowest, verdict, ratedCount: entries.length, totalParams: parameters.length }
+    // Recommendation
+    let recommendation = ''
+    if (avg >= 4.5) recommendation = 'Highly recommended — top tier content'
+    else if (avg >= 3.5) recommendation = 'Worth watching — solid overall'
+    else if (avg >= 2.5) recommendation = 'Decent but has room for improvement'
+    else if (avg >= 1.5) recommendation = 'Below expectations — consider skipping'
+    else recommendation = 'Not recommended'
+
+    // Sorted entries for breakdown
+    const sorted = [...entries].sort((a, b) => b[1] - a[1])
+
+    return {
+      avg, highest, lowest, verdict, recommendation, consistency,
+      ratedCount: entries.length, totalParams: parameters.length,
+      totalScore, maxPossible, percentage, sorted, stdDev: stdDev.toFixed(2)
+    }
   }
 
   const filteredVideos = activeFolder === 'all'
@@ -504,28 +533,73 @@ function App() {
                 ))}
               </div>
 
-              {getAnalysis(video) && (
-                <div className="analysis">
-                  <div className="analysis-verdict">
-                    <span className={`verdict-badge verdict-${getAnalysis(video).verdict.toLowerCase().replace(' ', '-')}`}>
-                      {getAnalysis(video).verdict}
-                    </span>
-                    <span className="analysis-summary">
-                      {getAnalysis(video).ratedCount}/{getAnalysis(video).totalParams} rated
-                    </span>
-                  </div>
-                  <div className="analysis-details">
-                    <span className="analysis-item best">
-                      Best: {getAnalysis(video).highest[0]} ({getAnalysis(video).highest[1]})
-                    </span>
-                    {getAnalysis(video).ratedCount > 1 && (
-                      <span className="analysis-item weak">
-                        Weakest: {getAnalysis(video).lowest[0]} ({getAnalysis(video).lowest[1]})
+              {getAnalysis(video) && (() => {
+                const analysis = getAnalysis(video)
+                return (
+                  <div className="analysis">
+                    <div className="analysis-header">
+                      <span className={`verdict-badge verdict-${analysis.verdict.toLowerCase().replace(' ', '-')}`}>
+                        {analysis.verdict}
                       </span>
-                    )}
+                      <span className="analysis-score-big">{analysis.avg}/5</span>
+                    </div>
+
+                    <div className="analysis-stats">
+                      <div className="stat-item">
+                        <span className="stat-label">Score</span>
+                        <span className="stat-value">{analysis.totalScore}/{analysis.maxPossible} ({analysis.percentage}%)</span>
+                      </div>
+                      <div className="stat-item">
+                        <span className="stat-label">Rated</span>
+                        <span className="stat-value">{analysis.ratedCount}/{analysis.totalParams} parameters</span>
+                      </div>
+                      <div className="stat-item">
+                        <span className="stat-label">Consistency</span>
+                        <span className={`stat-value consistency-${analysis.consistency.toLowerCase().replace(' ', '-')}`}>{analysis.consistency}</span>
+                      </div>
+                    </div>
+
+                    <div className="analysis-bar-section">
+                      <div className="analysis-progress-bar">
+                        <div
+                          className="analysis-progress-fill"
+                          style={{ width: `${analysis.percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    <div className="analysis-breakdown">
+                      {analysis.sorted.map(([param, score]) => (
+                        <div key={param} className="breakdown-row">
+                          <span className="breakdown-label">{param}</span>
+                          <div className="breakdown-bar-bg">
+                            <div
+                              className="breakdown-bar-fill"
+                              style={{ width: `${(score / 5) * 100}%` }}
+                            ></div>
+                          </div>
+                          <span className="breakdown-score">{score}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="analysis-highlights">
+                      <span className="analysis-item best">
+                        Best: {analysis.highest[0]} ({analysis.highest[1]})
+                      </span>
+                      {analysis.ratedCount > 1 && (
+                        <span className="analysis-item weak">
+                          Weakest: {analysis.lowest[0]} ({analysis.lowest[1]})
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="analysis-recommendation">
+                      {analysis.recommendation}
+                    </div>
                   </div>
-                </div>
-              )}
+                )
+              })()}
 
               <button onClick={() => deleteVideo(video.id)} className="delete-btn">
                 Remove
