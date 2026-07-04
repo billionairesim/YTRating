@@ -10,7 +10,7 @@ function App() {
 
   const [parameters, setParameters] = useState(() => {
     const saved = localStorage.getItem('yt-rater-params')
-    return saved ? JSON.parse(saved) : ['Content Quality', 'Production Value', 'Engagement']
+    return saved ? JSON.parse(saved) : []
   })
 
   const [showAddVideo, setShowAddVideo] = useState(false)
