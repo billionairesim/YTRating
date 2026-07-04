@@ -545,6 +545,7 @@ body {
 }
 
 .video-images {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -598,23 +599,28 @@ body {
   background: #e53935;
 }
 
-.add-image-btn {
-  width: 280px;
-  height: 60px;
-  border: 2px dashed var(--border);
-  border-radius: 12px;
+.add-image-overlay {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
   cursor: pointer;
-  color: var(--text-muted);
-  font-size: 24px;
-  transition: all 0.15s;
+  color: white;
+  font-size: 36px;
+  font-weight: 300;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
-.add-image-btn:hover {
-  border-color: var(--text-muted);
-  color: var(--text-secondary);
+.video-images:hover .add-image-overlay {
+  opacity: 1;
+}
+
+.add-image-overlay:hover {
+  background: rgba(0, 0, 0, 0.65);
 }
 
 .video-title-section {

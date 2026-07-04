@@ -479,7 +479,7 @@ function App() {
                   >&times;</button>
                 </div>
               ))}
-              <label className="add-image-btn">
+              <label className="add-image-overlay">
                 <span>+</span>
                 <input
                   type="file"
