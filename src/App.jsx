@@ -57,7 +57,9 @@ function App() {
   })
 
   const themes = [
-    { id: 'black', color: '#000000' },
+    { id: 'black', color: '#0a0a0a' },
+    { id: 'grey-dark', color: '#2c2c2c' },
+    { id: 'grey-light', color: '#d0d0d0' },
     { id: 'default', color: '#f5f5f5' },
     { id: 'ocean', color: '#1565c0' },
     { id: 'forest', color: '#2e7d32' },
