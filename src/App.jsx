@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 
 
@@ -31,9 +31,13 @@ function App() {
   const [editingTitle, setEditingTitle] = useState(null)
   const [expandedAnalysis, setExpandedAnalysis] = useState({})
   const [imageIndex, setImageIndex] = useState({})
-  const [lightbox, setLightbox] = useState(null) // { videoId, index }
+  const [lightbox, setLightbox] = useState(null)
   const [touchStart, setTouchStart] = useState(null)
   const [touchEnd, setTouchEnd] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showSearch, setShowSearch] = useState(false)
+  const [toast, setToast] = useState(null)
+  const toastTimeout = useRef(null)
 
   const handleSwipe = (videoId, images) => {
     if (!touchStart || !touchEnd) return
@@ -45,13 +49,12 @@ function App() {
     const safeIdx = currentIdx % images.length
 
     if (distance > 0) {
-      // swipe left = next
       setImageIndex(prev => ({ ...prev, [videoId]: (safeIdx + 1) % images.length }))
     } else {
-      // swipe right = prev
       setImageIndex(prev => ({ ...prev, [videoId]: (safeIdx - 1 + images.length) % images.length }))
     }
   }
+
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('yt-rater-theme') || 'black'
   })
@@ -69,6 +72,18 @@ function App() {
     const currentIndex = themes.findIndex(t => t.id === theme)
     const nextIndex = (currentIndex + 1) % themes.length
     setTheme(themes[nextIndex].id)
+  }
+
+  // Toast helper
+  const showToast = (message) => {
+    if (toastTimeout.current) clearTimeout(toastTimeout.current)
+    setToast(message)
+    toastTimeout.current = setTimeout(() => setToast(null), 2500)
+  }
+
+  // Haptic feedback
+  const triggerHaptic = () => {
+    if (navigator.vibrate) navigator.vibrate(10)
   }
 
   useEffect(() => {
@@ -134,6 +149,7 @@ function App() {
     setVideoFolder('')
     setShowAddVideo(false)
     setError('')
+    showToast('Video added!')
   }
 
   const addFolder = () => {
@@ -151,22 +167,24 @@ function App() {
     setNewFolderName('')
     setShowAddFolder(false)
     setError('')
+    showToast('Folder created!')
   }
 
   const deleteFolder = (folderId) => {
     const folder = folders.find(f => f.id === folderId)
-    // Move videos from this folder to "uncategorized"
     setVideos(videos.map(v =>
       v.folder === folder.name ? { ...v, folder: null } : v
     ))
     setFolders(folders.filter(f => f.id !== folderId))
     if (activeFolder === folder.name) setActiveFolder('all')
+    showToast('Folder deleted')
   }
 
   const moveVideoToFolder = (videoId, folderName) => {
     setVideos(videos.map(v =>
       v.id === videoId ? { ...v, folder: folderName || null } : v
     ))
+    showToast(folderName ? `Moved to ${folderName}` : 'Removed from folder')
   }
 
   const addParameter = () => {
@@ -187,9 +205,11 @@ function App() {
     setNewParam('')
     setShowAddParam(false)
     setError('')
+    showToast('Parameter added!')
   }
 
   const updateRating = (videoId, param, value) => {
+    triggerHaptic()
     setVideos(videos.map(v =>
       v.id === videoId
         ? { ...v, ratings: { ...v.ratings, [param]: value } }
@@ -199,6 +219,7 @@ function App() {
 
   const deleteVideo = (videoId) => {
     setVideos(videos.filter(v => v.id !== videoId))
+    showToast('Video removed')
   }
 
   const addImagesToVideo = (videoId, e) => {
@@ -217,6 +238,7 @@ function App() {
       }
       reader.readAsDataURL(file)
     })
+    showToast('Image added!')
   }
 
   const removeImageFromVideo = (videoId, imageIndex) => {
@@ -225,6 +247,7 @@ function App() {
         ? { ...v, images: (v.images || []).filter((_, i) => i !== imageIndex) }
         : v
     ))
+    showToast('Image removed')
   }
 
   const updateTitle = (videoId, newTitle) => {
@@ -233,6 +256,7 @@ function App() {
       v.id === videoId ? { ...v, title: newTitle.trim() } : v
     ))
     setEditingTitle(null)
+    showToast('Title updated')
   }
 
   const deleteParameter = (param) => {
@@ -242,6 +266,7 @@ function App() {
       delete newRatings[param]
       return { ...v, ratings: newRatings }
     }))
+    showToast('Parameter removed')
   }
 
   const getAverage = (video) => {
@@ -263,7 +288,6 @@ function App() {
     const maxPossible = entries.length * 5
     const percentage = Math.round((totalScore / maxPossible) * 100)
 
-    // Consistency (std deviation)
     const mean = totalScore / entries.length
     const variance = entries.reduce((sum, [, v]) => sum + Math.pow(v - mean, 2), 0) / entries.length
     const stdDev = Math.sqrt(variance)
@@ -273,7 +297,6 @@ function App() {
     else if (stdDev <= 1.5) consistency = 'Mixed'
     else consistency = 'Inconsistent'
 
-    // Verdict
     let verdict = ''
     if (avg >= 4.5) verdict = 'Excellent'
     else if (avg >= 3.5) verdict = 'Great'
@@ -281,7 +304,6 @@ function App() {
     else if (avg >= 1.5) verdict = 'Below Average'
     else verdict = 'Poor'
 
-    // Recommendation
     let recommendation = ''
     if (avg >= 4.5) recommendation = 'Outstanding — excels across the board'
     else if (avg >= 3.5) recommendation = 'Strong performance — minor areas to polish'
@@ -289,7 +311,6 @@ function App() {
     else if (avg >= 1.5) recommendation = 'Falls short — significant gaps to address'
     else recommendation = 'Needs major improvement across most areas'
 
-    // Sorted entries for breakdown
     const sorted = [...entries].sort((a, b) => b[1] - a[1])
 
     return {
@@ -299,11 +320,22 @@ function App() {
     }
   }
 
-  const filteredVideos = activeFolder === 'all'
-    ? videos
-    : activeFolder === 'uncategorized'
-      ? videos.filter(v => !v.folder)
-      : videos.filter(v => v.folder === activeFolder)
+  const filteredVideos = (() => {
+    let list = activeFolder === 'all'
+      ? videos
+      : activeFolder === 'uncategorized'
+        ? videos.filter(v => !v.folder)
+        : videos.filter(v => v.folder === activeFolder)
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      list = list.filter(v =>
+        v.title.toLowerCase().includes(q)
+      )
+    }
+
+    return list
+  })()
 
   return (
     <div className="app">
@@ -318,6 +350,9 @@ function App() {
           ></button>
         </div>
         <div className="header-actions">
+          <button onClick={() => setShowSearch(!showSearch)} className="btn btn-secondary search-toggle">
+            {showSearch ? '✕' : '⌕'}
+          </button>
           <button onClick={() => setShowAddFolder(true)} className="btn btn-secondary">
             + Folder
           </button>
@@ -329,6 +364,23 @@ function App() {
           </button>
         </div>
       </header>
+
+      {/* Search bar */}
+      {showSearch && (
+        <div className="search-bar">
+          <input
+            type="text"
+            placeholder="Search by title..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="search-input"
+            autoFocus
+          />
+          {searchQuery && (
+            <button className="search-clear" onClick={() => setSearchQuery('')}>&times;</button>
+          )}
+        </div>
+      )}
 
       {/* Folders tabs */}
       <div className="folders-bar">
@@ -486,12 +538,21 @@ function App() {
       <div className="videos-grid">
         {filteredVideos.length === 0 && (
           <div className="empty-state">
-            <p>{activeFolder === 'all' ? 'No videos yet. Add one to start rating!' : 'No videos in this folder.'}</p>
+            {searchQuery ? (
+              <p>No results for "{searchQuery}"</p>
+            ) : (
+              <>
+                <p>{activeFolder === 'all' ? 'No videos yet.' : `No videos in this folder.`}</p>
+                <button onClick={() => setShowAddVideo(true)} className="btn btn-primary empty-add-btn">
+                  + Add Video
+                </button>
+              </>
+            )}
           </div>
         )}
 
         {filteredVideos.map(video => (
-          <div key={video.id} className="video-card">
+          <div key={video.id} className="video-card card-animate">
             <div className="video-images">
               {(() => {
                 const images = (video.images || [video.image]).filter(Boolean)
@@ -771,6 +832,11 @@ function App() {
           </div>
         )
       })()}
+
+      {/* Toast */}
+      {toast && (
+        <div className="toast">{toast}</div>
+      )}
     </div>
   )
 }
