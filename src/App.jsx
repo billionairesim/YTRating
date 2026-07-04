@@ -52,11 +52,32 @@ function App() {
       setImageIndex(prev => ({ ...prev, [videoId]: (safeIdx - 1 + images.length) % images.length }))
     }
   }
-  const theme = 'black'
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('yt-rater-theme') || 'black'
+  })
+
+  const themes = [
+    { id: 'black', color: '#000000' },
+    { id: 'default', color: '#f5f5f5' },
+    { id: 'ocean', color: '#1565c0' },
+    { id: 'forest', color: '#2e7d32' },
+    { id: 'sunset', color: '#e65100' },
+    { id: 'berry', color: '#7b1fa2' },
+    { id: 'rose', color: '#c62828' },
+    { id: 'midnight', color: '#1a1a2e' },
+    { id: 'teal', color: '#00695c' },
+  ]
+
+  const cycleTheme = () => {
+    const currentIndex = themes.findIndex(t => t.id === theme)
+    const nextIndex = (currentIndex + 1) % themes.length
+    setTheme(themes[nextIndex].id)
+  }
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', 'black')
-  }, [])
+    localStorage.setItem('yt-rater-theme', theme)
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
 
   useEffect(() => {
     localStorage.setItem('yt-rater-videos', JSON.stringify(videos))
@@ -290,7 +311,15 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>YT Rater</h1>
+        <div className="header-left">
+          <h1>YT Rater</h1>
+          <button
+            onClick={cycleTheme}
+            className="theme-circle"
+            title="Change theme"
+            style={{ background: themes.find(t => t.id === theme)?.color }}
+          ></button>
+        </div>
         <div className="header-actions">
           <button onClick={() => setShowAddFolder(true)} className="btn btn-secondary">
             + Folder
