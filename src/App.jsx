@@ -32,6 +32,26 @@ function App() {
   const [expandedAnalysis, setExpandedAnalysis] = useState({})
   const [imageIndex, setImageIndex] = useState({})
   const [lightbox, setLightbox] = useState(null) // { videoId, index }
+  const [touchStart, setTouchStart] = useState(null)
+  const [touchEnd, setTouchEnd] = useState(null)
+
+  const handleSwipe = (videoId, images) => {
+    if (!touchStart || !touchEnd) return
+    const distance = touchStart - touchEnd
+    const minSwipe = 50
+    if (Math.abs(distance) < minSwipe) return
+
+    const currentIdx = imageIndex[videoId] || 0
+    const safeIdx = currentIdx % images.length
+
+    if (distance > 0) {
+      // swipe left = next
+      setImageIndex(prev => ({ ...prev, [videoId]: (safeIdx + 1) % images.length }))
+    } else {
+      // swipe right = prev
+      setImageIndex(prev => ({ ...prev, [videoId]: (safeIdx - 1 + images.length) % images.length }))
+    }
+  }
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('yt-rater-theme') || 'default'
   })
@@ -478,7 +498,12 @@ function App() {
                 const safeIdx = images.length > 0 ? currentIdx % images.length : 0
 
                 return images.length > 0 ? (
-                  <div className="video-thumbnail">
+                  <div
+                    className="video-thumbnail"
+                    onTouchStart={(e) => setTouchStart(e.targetTouches[0].clientX)}
+                    onTouchMove={(e) => setTouchEnd(e.targetTouches[0].clientX)}
+                    onTouchEnd={() => { handleSwipe(video.id, images); setTouchStart(null); setTouchEnd(null) }}
+                  >
                     <img
                       src={images[safeIdx]}
                       alt={`${video.title} ${safeIdx + 1}`}
@@ -502,17 +527,17 @@ function App() {
                     </label>
 
                     {images.length > 1 && (
-                      <div className="thumbnail-strip">
-                        {images.map((img, i) => (
-                          <img
-                            key={i}
-                            src={img}
-                            alt={`thumb ${i + 1}`}
-                            className={`strip-thumb ${i === safeIdx ? 'active' : ''}`}
-                            onClick={(e) => { e.stopPropagation(); setImageIndex(prev => ({ ...prev, [video.id]: i })) }}
-                          />
-                        ))}
-                      </div>
+                      <>
+                        <button
+                          className="slide-arrow slide-left"
+                          onClick={(e) => { e.stopPropagation(); setImageIndex(prev => ({ ...prev, [video.id]: (safeIdx - 1 + images.length) % images.length })) }}
+                        >&#8249;</button>
+                        <button
+                          className="slide-arrow slide-right"
+                          onClick={(e) => { e.stopPropagation(); setImageIndex(prev => ({ ...prev, [video.id]: (safeIdx + 1) % images.length })) }}
+                        >&#8250;</button>
+                        <div className="slide-counter">{safeIdx + 1}/{images.length}</div>
+                      </>
                     )}
                   </div>
                 ) : (
@@ -704,7 +729,26 @@ function App() {
         const idx = lightbox.index % images.length
 
         return (
-          <div className="lightbox-overlay" onClick={() => setLightbox(null)}>
+          <div
+            className="lightbox-overlay"
+            onClick={() => setLightbox(null)}
+            onTouchStart={(e) => setTouchStart(e.targetTouches[0].clientX)}
+            onTouchMove={(e) => setTouchEnd(e.targetTouches[0].clientX)}
+            onTouchEnd={() => {
+              if (touchStart && touchEnd && images.length > 1) {
+                const distance = touchStart - touchEnd
+                if (Math.abs(distance) > 50) {
+                  if (distance > 0) {
+                    setLightbox({ ...lightbox, index: (idx + 1) % images.length })
+                  } else {
+                    setLightbox({ ...lightbox, index: (idx - 1 + images.length) % images.length })
+                  }
+                }
+              }
+              setTouchStart(null)
+              setTouchEnd(null)
+            }}
+          >
             <div className="lightbox-content" onClick={e => e.stopPropagation()}>
               <button className="lightbox-close" onClick={() => setLightbox(null)}>&times;</button>
               <img src={images[idx]} alt={`${video.title} ${idx + 1}`} className="lightbox-img" />

@@ -566,47 +566,60 @@ body {
   display: block;
 }
 
-/* Thumbnail strip at bottom of image */
-.thumbnail-strip {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  right: 8px;
-  display: flex;
-  gap: 4px;
-  justify-content: center;
-  z-index: 2;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.video-thumbnail:hover .thumbnail-strip {
-  opacity: 1;
-}
-
-.strip-thumb {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  object-fit: cover;
-  cursor: pointer;
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  transition: all 0.15s;
-}
-
-.strip-thumb.active {
-  border-color: white;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
-}
-
-.strip-thumb:hover {
-  border-color: white;
-  transform: scale(1.1);
-}
-
 /* Clickable thumbnail */
 .thumbnail-clickable {
   cursor: pointer;
+}
+
+/* Slide arrows on card image */
+.slide-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border-radius: 50%;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 3;
+}
+
+.video-thumbnail:hover .slide-arrow {
+  opacity: 1;
+}
+
+.slide-arrow:hover {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.slide-left {
+  left: 8px;
+}
+
+.slide-right {
+  right: 8px;
+}
+
+/* Image counter badge */
+.slide-counter {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  z-index: 2;
 }
 
 /* Lightbox */
