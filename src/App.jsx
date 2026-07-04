@@ -602,7 +602,7 @@ function App() {
                           <span className="analysis-item best">
                             Best: {analysis.highest[0]} ({analysis.highest[1]})
                           </span>
-                          {analysis.ratedCount > 1 && (
+                          {analysis.ratedCount > 1 && analysis.lowest[1] < analysis.highest[1] && (
                             <span className="analysis-item weak">
                               Weakest: {analysis.lowest[0]} ({analysis.lowest[1]})
                             </span>
