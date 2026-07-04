@@ -16,9 +16,10 @@ function App() {
   const [showAddVideo, setShowAddVideo] = useState(false)
   const [showAddParam, setShowAddParam] = useState(false)
   const [videoTitle, setVideoTitle] = useState('')
-  const [customImage, setCustomImage] = useState('')
+  const [customImages, setCustomImages] = useState([])
   const [newParam, setNewParam] = useState('')
   const [error, setError] = useState('')
+  const [editingTitle, setEditingTitle] = useState(null)
 
   useEffect(() => {
     localStorage.setItem('yt-rater-videos', JSON.stringify(videos))
@@ -29,17 +30,26 @@ function App() {
   }, [parameters])
 
   const handleImageUpload = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file')
+    const files = Array.from(e.target.files)
+    if (!files.length) return
+
+    const imageFiles = files.filter(f => f.type.startsWith('image/'))
+    if (imageFiles.length === 0) {
+      setError('Please select image files')
       return
     }
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      setCustomImage(event.target.result)
-    }
-    reader.readAsDataURL(file)
+
+    imageFiles.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        setCustomImages(prev => [...prev, event.target.result])
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const removeImage = (index) => {
+    setCustomImages(prev => prev.filter((_, i) => i !== index))
   }
 
   const addVideo = () => {
@@ -54,13 +64,13 @@ function App() {
     setVideos([...videos, {
       id: Date.now(),
       title: videoTitle.trim(),
-      image: customImage || null,
+      images: customImages.length > 0 ? [...customImages] : [],
       ratings,
       addedAt: new Date().toISOString()
     }])
 
     setVideoTitle('')
-    setCustomImage('')
+    setCustomImages([])
     setShowAddVideo(false)
     setError('')
   }
@@ -96,6 +106,40 @@ function App() {
 
   const deleteVideo = (videoId) => {
     setVideos(videos.filter(v => v.id !== videoId))
+  }
+
+  const addImagesToVideo = (videoId, e) => {
+    const files = Array.from(e.target.files)
+    if (!files.length) return
+
+    const imageFiles = files.filter(f => f.type.startsWith('image/'))
+    imageFiles.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        setVideos(prev => prev.map(v =>
+          v.id === videoId
+            ? { ...v, images: [...(v.images || []), event.target.result] }
+            : v
+        ))
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const removeImageFromVideo = (videoId, imageIndex) => {
+    setVideos(videos.map(v =>
+      v.id === videoId
+        ? { ...v, images: (v.images || []).filter((_, i) => i !== imageIndex) }
+        : v
+    ))
+  }
+
+  const updateTitle = (videoId, newTitle) => {
+    if (!newTitle.trim()) return
+    setVideos(videos.map(v =>
+      v.id === videoId ? { ...v, title: newTitle.trim() } : v
+    ))
+    setEditingTitle(null)
   }
 
   const deleteParameter = (param) => {
@@ -161,7 +205,7 @@ function App() {
 
       {/* Add Video Modal */}
       {showAddVideo && (
-        <div className="modal-overlay" onClick={() => { setShowAddVideo(false); setError(''); setCustomImage('') }}>
+        <div className="modal-overlay" onClick={() => { setShowAddVideo(false); setError(''); setCustomImages([]) }}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h2>Add Video</h2>
             <input
@@ -174,35 +218,34 @@ function App() {
             />
 
             <div className="image-upload-section">
+              {customImages.length > 0 && (
+                <div className="image-previews">
+                  {customImages.map((img, index) => (
+                    <div key={index} className="image-preview-item">
+                      <img src={img} alt={`Preview ${index + 1}`} />
+                      <button onClick={() => removeImage(index)} className="image-remove-x">&times;</button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <label className="image-upload-label">
-                {customImage ? (
-                  <div className="image-preview">
-                    <img src={customImage} alt="Preview" />
-                    <span className="change-text">Change image</span>
-                  </div>
-                ) : (
-                  <div className="image-upload-placeholder">
-                    <span className="upload-icon">+</span>
-                    <span>Add custom thumbnail</span>
-                  </div>
-                )}
+                <div className="image-upload-placeholder">
+                  <span className="upload-icon">+</span>
+                  <span>{customImages.length > 0 ? 'Add more images' : 'Add images (optional)'}</span>
+                </div>
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={handleImageUpload}
                   className="file-input-hidden"
                 />
               </label>
-              {customImage && (
-                <button onClick={() => setCustomImage('')} className="remove-image-btn">
-                  Remove image
-                </button>
-              )}
             </div>
 
             {error && <p className="error">{error}</p>}
             <div className="modal-actions">
-              <button onClick={() => { setShowAddVideo(false); setError(''); setCustomImage('') }} className="btn btn-secondary">Cancel</button>
+              <button onClick={() => { setShowAddVideo(false); setError(''); setCustomImages([]) }} className="btn btn-secondary">Cancel</button>
               <button onClick={addVideo} className="btn btn-primary">Add</button>
             </div>
           </div>
@@ -242,18 +285,47 @@ function App() {
 
         {videos.map(video => (
           <div key={video.id} className="video-card">
-            {video.image && (
-              <div className="video-thumbnail">
-                <img
-                  src={video.image}
-                  alt={video.title}
+            <div className="video-images">
+              {(video.images || [video.image]).filter(Boolean).map((img, i) => (
+                <div key={i} className="video-thumbnail">
+                  <img src={img} alt={`${video.title} ${i + 1}`} />
+                  <button
+                    className="thumbnail-remove"
+                    onClick={() => removeImageFromVideo(video.id, i)}
+                  >&times;</button>
+                </div>
+              ))}
+              <label className="add-image-btn">
+                <span>+</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => addImagesToVideo(video.id, e)}
+                  className="file-input-hidden"
                 />
-              </div>
-            )}
+              </label>
+            </div>
 
             <div className="video-info">
               <div className="video-title-section">
-                <h3>{video.title}</h3>
+                {editingTitle === video.id ? (
+                  <input
+                    type="text"
+                    className="edit-title-input"
+                    defaultValue={video.title}
+                    autoFocus
+                    onBlur={(e) => updateTitle(video.id, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') updateTitle(video.id, e.target.value)
+                      if (e.key === 'Escape') setEditingTitle(null)
+                    }}
+                  />
+                ) : (
+                  <h3 onClick={() => setEditingTitle(video.id)} className="editable-title">
+                    {video.title}
+                  </h3>
+                )}
                 <span className="avg-score">{getAverage(video)}</span>
               </div>
 
