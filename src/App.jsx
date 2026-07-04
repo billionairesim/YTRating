@@ -52,26 +52,11 @@ function App() {
       setImageIndex(prev => ({ ...prev, [videoId]: (safeIdx - 1 + images.length) % images.length }))
     }
   }
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('yt-rater-theme') || 'default'
-  })
-
-  const themes = [
-    { id: 'default', name: 'Default', color: '#1a1a1a' },
-    { id: 'black', name: 'Black', color: '#000000' },
-    { id: 'ocean', name: 'Ocean', color: '#1565c0' },
-    { id: 'forest', name: 'Forest', color: '#2e7d32' },
-    { id: 'sunset', name: 'Sunset', color: '#e65100' },
-    { id: 'berry', name: 'Berry', color: '#7b1fa2' },
-    { id: 'rose', name: 'Rose', color: '#c62828' },
-    { id: 'midnight', name: 'Midnight', color: '#1a1a2e' },
-    { id: 'teal', name: 'Teal', color: '#00695c' },
-  ]
+  const theme = 'black'
 
   useEffect(() => {
-    localStorage.setItem('yt-rater-theme', theme)
-    document.documentElement.setAttribute('data-theme', theme)
-  }, [theme])
+    document.documentElement.setAttribute('data-theme', 'black')
+  }, [])
 
   useEffect(() => {
     localStorage.setItem('yt-rater-videos', JSON.stringify(videos))
