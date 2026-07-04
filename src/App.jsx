@@ -30,6 +30,7 @@ function App() {
   const [error, setError] = useState('')
   const [editingTitle, setEditingTitle] = useState(null)
   const [expandedAnalysis, setExpandedAnalysis] = useState({})
+  const [imageIndex, setImageIndex] = useState({})
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('yt-rater-theme') || 'default'
   })
@@ -470,25 +471,66 @@ function App() {
         {filteredVideos.map(video => (
           <div key={video.id} className="video-card">
             <div className="video-images">
-              {(video.images || [video.image]).filter(Boolean).map((img, i) => (
-                <div key={i} className="video-thumbnail">
-                  <img src={img} alt={`${video.title} ${i + 1}`} />
-                  <button
-                    className="thumbnail-remove"
-                    onClick={() => removeImageFromVideo(video.id, i)}
-                  >&times;</button>
-                </div>
-              ))}
-              <label className="add-image-overlay">
-                <span>+</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => addImagesToVideo(video.id, e)}
-                  className="file-input-hidden"
-                />
-              </label>
+              {(() => {
+                const images = (video.images || [video.image]).filter(Boolean)
+                const currentIdx = imageIndex[video.id] || 0
+                const safeIdx = images.length > 0 ? currentIdx % images.length : 0
+
+                return images.length > 0 ? (
+                  <>
+                    <div className="video-thumbnail">
+                      <img src={images[safeIdx]} alt={`${video.title} ${safeIdx + 1}`} />
+                      <button
+                        className="thumbnail-remove"
+                        onClick={() => removeImageFromVideo(video.id, safeIdx)}
+                      >&times;</button>
+
+                      {images.length > 1 && (
+                        <>
+                          <button
+                            className="slide-arrow slide-left"
+                            onClick={() => setImageIndex(prev => ({ ...prev, [video.id]: (safeIdx - 1 + images.length) % images.length }))}
+                          >&#8249;</button>
+                          <button
+                            className="slide-arrow slide-right"
+                            onClick={() => setImageIndex(prev => ({ ...prev, [video.id]: (safeIdx + 1) % images.length }))}
+                          >&#8250;</button>
+                          <div className="slide-dots">
+                            {images.map((_, i) => (
+                              <span
+                                key={i}
+                                className={`slide-dot ${i === safeIdx ? 'active' : ''}`}
+                                onClick={() => setImageIndex(prev => ({ ...prev, [video.id]: i }))}
+                              ></span>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <label className="add-image-overlay">
+                      <span>+</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={(e) => addImagesToVideo(video.id, e)}
+                        className="file-input-hidden"
+                      />
+                    </label>
+                  </>
+                ) : (
+                  <label className="add-image-empty">
+                    <span>+</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={(e) => addImagesToVideo(video.id, e)}
+                      className="file-input-hidden"
+                    />
+                  </label>
+                )
+              })()}
             </div>
 
             <div className="video-info">

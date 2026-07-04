@@ -546,25 +546,17 @@ body {
 
 .video-images {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   flex-shrink: 0;
-}
-
-.video-thumbnail {
   width: 280px;
   height: 280px;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.video-images .video-thumbnail:not(:first-child) {
-  height: 140px;
 }
 
 .video-thumbnail {
   position: relative;
+  width: 280px;
+  height: 280px;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .video-thumbnail img {
@@ -572,6 +564,88 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+/* Slideshow arrows */
+.slide-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border-radius: 50%;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 2;
+}
+
+.video-thumbnail:hover .slide-arrow {
+  opacity: 1;
+}
+
+.slide-arrow:hover {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.slide-left {
+  left: 8px;
+}
+
+.slide-right {
+  right: 8px;
+}
+
+/* Slide dots */
+.slide-dots {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+}
+
+.slide-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.slide-dot.active {
+  background: white;
+  transform: scale(1.2);
+}
+
+/* Empty state for no images */
+.add-image-empty {
+  width: 280px;
+  height: 280px;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 36px;
+  transition: all 0.15s;
+}
+
+.add-image-empty:hover {
+  border-color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .thumbnail-remove {
