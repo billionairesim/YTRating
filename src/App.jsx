@@ -238,11 +238,11 @@ function App() {
 
     // Recommendation
     let recommendation = ''
-    if (avg >= 4.5) recommendation = 'Highly recommended — top tier content'
-    else if (avg >= 3.5) recommendation = 'Worth watching — solid overall'
-    else if (avg >= 2.5) recommendation = 'Decent but has room for improvement'
-    else if (avg >= 1.5) recommendation = 'Below expectations — consider skipping'
-    else recommendation = 'Not recommended'
+    if (avg >= 4.5) recommendation = 'Outstanding — excels across the board'
+    else if (avg >= 3.5) recommendation = 'Strong performance — minor areas to polish'
+    else if (avg >= 2.5) recommendation = 'Solid foundation — clear room to grow'
+    else if (avg >= 1.5) recommendation = 'Falls short — significant gaps to address'
+    else recommendation = 'Needs major improvement across most areas'
 
     // Sorted entries for breakdown
     const sorted = [...entries].sort((a, b) => b[1] - a[1])
