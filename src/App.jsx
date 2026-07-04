@@ -59,15 +59,10 @@ function App() {
   const themes = [
     { id: 'black', color: '#0a0a0a' },
     { id: 'grey-dark', color: '#2c2c2c' },
+    { id: 'grey-mid', color: '#6e6e6e' },
     { id: 'grey-light', color: '#d0d0d0' },
-    { id: 'default', color: '#f5f5f5' },
-    { id: 'ocean', color: '#1565c0' },
-    { id: 'forest', color: '#2e7d32' },
     { id: 'sunset', color: '#e65100' },
-    { id: 'berry', color: '#7b1fa2' },
-    { id: 'rose', color: '#c62828' },
     { id: 'midnight', color: '#1a1a2e' },
-    { id: 'teal', color: '#00695c' },
   ]
 
   const cycleTheme = () => {

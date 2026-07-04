@@ -53,6 +53,24 @@
   --star-color: #f5a623;
 }
 
+[data-theme="grey-mid"] {
+  --primary: #e0e0e0;
+  --primary-hover: #d0d0d0;
+  --primary-text: #1a1a1a;
+  --bg: #6e6e6e;
+  --card-bg: #7a7a7a;
+  --text: #f5f5f5;
+  --text-secondary: #d8d8d8;
+  --text-muted: #a0a0a0;
+  --border: #5a5a5a;
+  --chip-bg: #727272;
+  --analysis-bg: #757575;
+  --tab-bg: #5e5e5e;
+  --tab-hover: #6a6a6a;
+  --input-bg: #6a6a6a;
+  --star-color: #f5a623;
+}
+
 [data-theme="grey-light"] {
   --primary: #4a4a4a;
   --primary-hover: #5a5a5a;
