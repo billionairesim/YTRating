@@ -29,6 +29,7 @@ function App() {
   const [newFolderName, setNewFolderName] = useState('')
   const [error, setError] = useState('')
   const [editingTitle, setEditingTitle] = useState(null)
+  const [expandedAnalysis, setExpandedAnalysis] = useState({})
 
   useEffect(() => {
     localStorage.setItem('yt-rater-videos', JSON.stringify(videos))
@@ -535,68 +536,84 @@ function App() {
 
               {getAnalysis(video) && (() => {
                 const analysis = getAnalysis(video)
+                const isExpanded = expandedAnalysis[video.id]
                 return (
                   <div className="analysis">
-                    <div className="analysis-header">
-                      <span className={`verdict-badge verdict-${analysis.verdict.toLowerCase().replace(' ', '-')}`}>
-                        {analysis.verdict}
-                      </span>
-                      <span className="analysis-score-big">{analysis.avg}/5</span>
-                    </div>
-
-                    <div className="analysis-stats">
-                      <div className="stat-item">
-                        <span className="stat-label">Score</span>
-                        <span className="stat-value">{analysis.totalScore}/{analysis.maxPossible} ({analysis.percentage}%)</span>
+                    <div
+                      className="analysis-header clickable"
+                      onClick={() => setExpandedAnalysis(prev => ({ ...prev, [video.id]: !prev[video.id] }))}
+                    >
+                      <div className="analysis-header-left">
+                        <span className={`verdict-badge verdict-${analysis.verdict.toLowerCase().replace(' ', '-')}`}>
+                          {analysis.verdict}
+                        </span>
+                        <span className="analysis-summary-inline">
+                          {analysis.ratedCount}/{analysis.totalParams} rated
+                        </span>
                       </div>
-                      <div className="stat-item">
-                        <span className="stat-label">Rated</span>
-                        <span className="stat-value">{analysis.ratedCount}/{analysis.totalParams} parameters</span>
-                      </div>
-                      <div className="stat-item">
-                        <span className="stat-label">Consistency</span>
-                        <span className={`stat-value consistency-${analysis.consistency.toLowerCase().replace(' ', '-')}`}>{analysis.consistency}</span>
+                      <div className="analysis-header-right">
+                        <span className="analysis-score-big">{analysis.avg}/5</span>
+                        <span className={`expand-arrow ${isExpanded ? 'expanded' : ''}`}>&#9662;</span>
                       </div>
                     </div>
 
-                    <div className="analysis-bar-section">
-                      <div className="analysis-progress-bar">
-                        <div
-                          className="analysis-progress-fill"
-                          style={{ width: `${analysis.percentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
+                    {isExpanded && (
+                      <div className="analysis-expanded">
+                        <div className="analysis-stats">
+                          <div className="stat-item">
+                            <span className="stat-label">Score</span>
+                            <span className="stat-value">{analysis.totalScore}/{analysis.maxPossible} ({analysis.percentage}%)</span>
+                          </div>
+                          <div className="stat-item">
+                            <span className="stat-label">Rated</span>
+                            <span className="stat-value">{analysis.ratedCount}/{analysis.totalParams} parameters</span>
+                          </div>
+                          <div className="stat-item">
+                            <span className="stat-label">Consistency</span>
+                            <span className={`stat-value consistency-${analysis.consistency.toLowerCase().replace(' ', '-')}`}>{analysis.consistency}</span>
+                          </div>
+                        </div>
 
-                    <div className="analysis-breakdown">
-                      {analysis.sorted.map(([param, score]) => (
-                        <div key={param} className="breakdown-row">
-                          <span className="breakdown-label">{param}</span>
-                          <div className="breakdown-bar-bg">
+                        <div className="analysis-bar-section">
+                          <div className="analysis-progress-bar">
                             <div
-                              className="breakdown-bar-fill"
-                              style={{ width: `${(score / 5) * 100}%` }}
+                              className="analysis-progress-fill"
+                              style={{ width: `${analysis.percentage}%` }}
                             ></div>
                           </div>
-                          <span className="breakdown-score">{score}</span>
                         </div>
-                      ))}
-                    </div>
 
-                    <div className="analysis-highlights">
-                      <span className="analysis-item best">
-                        Best: {analysis.highest[0]} ({analysis.highest[1]})
-                      </span>
-                      {analysis.ratedCount > 1 && (
-                        <span className="analysis-item weak">
-                          Weakest: {analysis.lowest[0]} ({analysis.lowest[1]})
-                        </span>
-                      )}
-                    </div>
+                        <div className="analysis-breakdown">
+                          {analysis.sorted.map(([param, score]) => (
+                            <div key={param} className="breakdown-row">
+                              <span className="breakdown-label">{param}</span>
+                              <div className="breakdown-bar-bg">
+                                <div
+                                  className="breakdown-bar-fill"
+                                  style={{ width: `${(score / 5) * 100}%` }}
+                                ></div>
+                              </div>
+                              <span className="breakdown-score">{score}</span>
+                            </div>
+                          ))}
+                        </div>
 
-                    <div className="analysis-recommendation">
-                      {analysis.recommendation}
-                    </div>
+                        <div className="analysis-highlights">
+                          <span className="analysis-item best">
+                            Best: {analysis.highest[0]} ({analysis.highest[1]})
+                          </span>
+                          {analysis.ratedCount > 1 && (
+                            <span className="analysis-item weak">
+                              Weakest: {analysis.lowest[0]} ({analysis.lowest[1]})
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="analysis-recommendation">
+                          {analysis.recommendation}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })()}
