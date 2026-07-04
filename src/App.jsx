@@ -13,11 +13,20 @@ function App() {
     return saved ? JSON.parse(saved) : []
   })
 
+  const [folders, setFolders] = useState(() => {
+    const saved = localStorage.getItem('yt-rater-folders')
+    return saved ? JSON.parse(saved) : []
+  })
+
+  const [activeFolder, setActiveFolder] = useState('all')
   const [showAddVideo, setShowAddVideo] = useState(false)
   const [showAddParam, setShowAddParam] = useState(false)
+  const [showAddFolder, setShowAddFolder] = useState(false)
   const [videoTitle, setVideoTitle] = useState('')
+  const [videoFolder, setVideoFolder] = useState('')
   const [customImages, setCustomImages] = useState([])
   const [newParam, setNewParam] = useState('')
+  const [newFolderName, setNewFolderName] = useState('')
   const [error, setError] = useState('')
   const [editingTitle, setEditingTitle] = useState(null)
 
@@ -28,6 +37,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('yt-rater-params', JSON.stringify(parameters))
   }, [parameters])
+
+  useEffect(() => {
+    localStorage.setItem('yt-rater-folders', JSON.stringify(folders))
+  }, [folders])
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files)
@@ -65,14 +78,49 @@ function App() {
       id: Date.now(),
       title: videoTitle.trim(),
       images: customImages.length > 0 ? [...customImages] : [],
+      folder: videoFolder || null,
       ratings,
       addedAt: new Date().toISOString()
     }])
 
     setVideoTitle('')
     setCustomImages([])
+    setVideoFolder('')
     setShowAddVideo(false)
     setError('')
+  }
+
+  const addFolder = () => {
+    if (!newFolderName.trim()) return
+    if (folders.some(f => f.name === newFolderName.trim())) {
+      setError('Folder already exists')
+      return
+    }
+
+    setFolders([...folders, {
+      id: Date.now(),
+      name: newFolderName.trim()
+    }])
+
+    setNewFolderName('')
+    setShowAddFolder(false)
+    setError('')
+  }
+
+  const deleteFolder = (folderId) => {
+    const folder = folders.find(f => f.id === folderId)
+    // Move videos from this folder to "uncategorized"
+    setVideos(videos.map(v =>
+      v.folder === folder.name ? { ...v, folder: null } : v
+    ))
+    setFolders(folders.filter(f => f.id !== folderId))
+    if (activeFolder === folder.name) setActiveFolder('all')
+  }
+
+  const moveVideoToFolder = (videoId, folderName) => {
+    setVideos(videos.map(v =>
+      v.id === videoId ? { ...v, folder: folderName || null } : v
+    ))
   }
 
   const addParameter = () => {
@@ -85,7 +133,6 @@ function App() {
     const param = newParam.trim()
     setParameters([...parameters, param])
 
-    // Add this param to all existing videos with rating 0
     setVideos(videos.map(v => ({
       ...v,
       ratings: { ...v.ratings, [param]: 0 }
@@ -177,11 +224,20 @@ function App() {
     return { avg, highest, lowest, verdict, ratedCount: entries.length, totalParams: parameters.length }
   }
 
+  const filteredVideos = activeFolder === 'all'
+    ? videos
+    : activeFolder === 'uncategorized'
+      ? videos.filter(v => !v.folder)
+      : videos.filter(v => v.folder === activeFolder)
+
   return (
     <div className="app">
       <header className="header">
         <h1>YT Rater</h1>
         <div className="header-actions">
+          <button onClick={() => setShowAddFolder(true)} className="btn btn-secondary">
+            + Folder
+          </button>
           <button onClick={() => setShowAddParam(true)} className="btn btn-secondary">
             + Parameter
           </button>
@@ -190,6 +246,38 @@ function App() {
           </button>
         </div>
       </header>
+
+      {/* Folders tabs */}
+      <div className="folders-bar">
+        <button
+          className={`folder-tab ${activeFolder === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveFolder('all')}
+        >
+          All ({videos.length})
+        </button>
+        {folders.map(folder => (
+          <div key={folder.id} className="folder-tab-wrapper">
+            <button
+              className={`folder-tab ${activeFolder === folder.name ? 'active' : ''}`}
+              onClick={() => setActiveFolder(folder.name)}
+            >
+              {folder.name} ({videos.filter(v => v.folder === folder.name).length})
+            </button>
+            <button
+              className="folder-delete"
+              onClick={() => deleteFolder(folder.id)}
+            >&times;</button>
+          </div>
+        ))}
+        {videos.some(v => !v.folder) && folders.length > 0 && (
+          <button
+            className={`folder-tab ${activeFolder === 'uncategorized' ? 'active' : ''}`}
+            onClick={() => setActiveFolder('uncategorized')}
+          >
+            Uncategorized ({videos.filter(v => !v.folder).length})
+          </button>
+        )}
+      </div>
 
       {/* Parameters bar */}
       {parameters.length > 0 && (
@@ -216,6 +304,19 @@ function App() {
               className="modal-input"
               autoFocus
             />
+
+            {folders.length > 0 && (
+              <select
+                value={videoFolder}
+                onChange={e => setVideoFolder(e.target.value)}
+                className="modal-input modal-select"
+              >
+                <option value="">No folder</option>
+                {folders.map(f => (
+                  <option key={f.id} value={f.name}>{f.name}</option>
+                ))}
+              </select>
+            )}
 
             <div className="image-upload-section">
               {customImages.length > 0 && (
@@ -252,6 +353,29 @@ function App() {
         </div>
       )}
 
+      {/* Add Folder Modal */}
+      {showAddFolder && (
+        <div className="modal-overlay" onClick={() => { setShowAddFolder(false); setError('') }}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2>Create Folder</h2>
+            <input
+              type="text"
+              placeholder="Folder name"
+              value={newFolderName}
+              onChange={e => setNewFolderName(e.target.value)}
+              className="modal-input"
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && addFolder()}
+            />
+            {error && <p className="error">{error}</p>}
+            <div className="modal-actions">
+              <button onClick={() => { setShowAddFolder(false); setError('') }} className="btn btn-secondary">Cancel</button>
+              <button onClick={addFolder} className="btn btn-primary">Create</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Parameter Modal */}
       {showAddParam && (
         <div className="modal-overlay" onClick={() => { setShowAddParam(false); setError('') }}>
@@ -277,13 +401,13 @@ function App() {
 
       {/* Videos List */}
       <div className="videos-grid">
-        {videos.length === 0 && (
+        {filteredVideos.length === 0 && (
           <div className="empty-state">
-            <p>No videos yet. Add one to start rating!</p>
+            <p>{activeFolder === 'all' ? 'No videos yet. Add one to start rating!' : 'No videos in this folder.'}</p>
           </div>
         )}
 
-        {videos.map(video => (
+        {filteredVideos.map(video => (
           <div key={video.id} className="video-card">
             <div className="video-images">
               {(video.images || [video.image]).filter(Boolean).map((img, i) => (
@@ -328,6 +452,21 @@ function App() {
                 )}
                 <span className="avg-score">{getAverage(video)}</span>
               </div>
+
+              {folders.length > 0 && (
+                <div className="video-folder-select">
+                  <select
+                    value={video.folder || ''}
+                    onChange={(e) => moveVideoToFolder(video.id, e.target.value)}
+                    className="folder-select"
+                  >
+                    <option value="">No folder</option>
+                    {folders.map(f => (
+                      <option key={f.id} value={f.name}>{f.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="ratings">
                 {parameters.map(param => (
