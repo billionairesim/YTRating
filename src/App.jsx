@@ -30,6 +30,25 @@ function App() {
   const [error, setError] = useState('')
   const [editingTitle, setEditingTitle] = useState(null)
   const [expandedAnalysis, setExpandedAnalysis] = useState({})
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('yt-rater-theme') || 'default'
+  })
+
+  const themes = [
+    { id: 'default', name: 'Default', color: '#1a1a1a' },
+    { id: 'ocean', name: 'Ocean', color: '#1565c0' },
+    { id: 'forest', name: 'Forest', color: '#2e7d32' },
+    { id: 'sunset', name: 'Sunset', color: '#e65100' },
+    { id: 'berry', name: 'Berry', color: '#7b1fa2' },
+    { id: 'rose', name: 'Rose', color: '#c62828' },
+    { id: 'midnight', name: 'Midnight', color: '#1a1a2e' },
+    { id: 'teal', name: 'Teal', color: '#00695c' },
+  ]
+
+  useEffect(() => {
+    localStorage.setItem('yt-rater-theme', theme)
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
 
   useEffect(() => {
     localStorage.setItem('yt-rater-videos', JSON.stringify(videos))
@@ -260,11 +279,21 @@ function App() {
       ? videos.filter(v => !v.folder)
       : videos.filter(v => v.folder === activeFolder)
 
+  const cycleTheme = () => {
+    const currentIndex = themes.findIndex(t => t.id === theme)
+    const nextIndex = (currentIndex + 1) % themes.length
+    setTheme(themes[nextIndex].id)
+  }
+
   return (
     <div className="app">
       <header className="header">
         <h1>YT Rater</h1>
         <div className="header-actions">
+          <button onClick={cycleTheme} className="btn theme-btn" title={`Theme: ${themes.find(t => t.id === theme)?.name}`}>
+            <span className="theme-dot" style={{ background: themes.find(t => t.id === theme)?.color }}></span>
+            {themes.find(t => t.id === theme)?.name}
+          </button>
           <button onClick={() => setShowAddFolder(true)} className="btn btn-secondary">
             + Folder
           </button>
