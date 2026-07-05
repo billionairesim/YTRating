@@ -37,7 +37,15 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearch, setShowSearch] = useState(false)
   const [toast, setToast] = useState(null)
+  const [sortOrder, setSortOrder] = useState('newest')
+  const [showDashboard, setShowDashboard] = useState(false)
+  const [compareMode, setCompareMode] = useState(false)
+  const [compareSelection, setCompareSelection] = useState([])
+  const [viewMode, setViewMode] = useState(() => {
+    return localStorage.getItem('yt-rater-view') || 'list'
+  })
   const toastTimeout = useRef(null)
+  const importRef = useRef(null)
 
   const handleSwipe = (videoId, images) => {
     if (!touchStart || !touchEnd) return
@@ -86,6 +94,47 @@ function App() {
     if (navigator.vibrate) navigator.vibrate(10)
   }
 
+  // Export data
+  const exportData = () => {
+    const data = {
+      videos,
+      parameters,
+      folders,
+      theme,
+      exportedAt: new Date().toISOString()
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `yt-rater-backup-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    showToast('Data exported!')
+  }
+
+  // Import data
+  const importData = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target.result)
+        if (data.videos) setVideos(data.videos)
+        if (data.parameters) setParameters(data.parameters)
+        if (data.folders) setFolders(data.folders)
+        if (data.theme) setTheme(data.theme)
+        showToast('Data imported!')
+      } catch {
+        showToast('Invalid file format')
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
+  }
+
   useEffect(() => {
     localStorage.setItem('yt-rater-theme', theme)
     document.documentElement.setAttribute('data-theme', theme)
@@ -102,6 +151,162 @@ function App() {
   useEffect(() => {
     localStorage.setItem('yt-rater-folders', JSON.stringify(folders))
   }, [folders])
+
+  useEffect(() => {
+    localStorage.setItem('yt-rater-view', viewMode)
+  }, [viewMode])
+
+  // Share card as image
+  const shareCard = async (video) => {
+    const avg = getAverage(video)
+    const analysis = getAnalysis(video)
+    const images = (video.images || []).filter(Boolean)
+
+    const width = 600
+    const imgHeight = images.length > 0 ? 280 : 0
+    const contentHeight = 400 + parameters.length * 36
+    const height = imgHeight + contentHeight
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    canvas.width = width
+    canvas.height = height
+
+    // Background
+    ctx.fillStyle = '#1a1a1a'
+    ctx.fillRect(0, 0, width, height)
+
+    // Draw image if available
+    const drawContent = () => {
+      let startY = imgHeight
+
+      // Border
+      ctx.strokeStyle = '#333'
+      ctx.lineWidth = 2
+      ctx.roundRect(10, 10, width - 20, height - 20, 16)
+      ctx.stroke()
+
+      // Title
+      ctx.fillStyle = '#ffffff'
+      ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, sans-serif'
+      ctx.fillText(video.title, 30, startY + 40)
+
+      // Average badge
+      ctx.fillStyle = '#f5a623'
+      ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, sans-serif'
+      ctx.fillText(`${avg}/5`, width - 90, startY + 40)
+
+      // Verdict
+      if (analysis) {
+        ctx.fillStyle = '#888'
+        ctx.font = '14px -apple-system, BlinkMacSystemFont, sans-serif'
+        ctx.fillText(`${analysis.verdict} • ${analysis.percentage}% • ${analysis.consistency}`, 30, startY + 70)
+      }
+
+      // Ratings
+      let y = startY + 110
+      ctx.font = '14px -apple-system, BlinkMacSystemFont, sans-serif'
+      parameters.forEach(param => {
+        const score = video.ratings[param] || 0
+
+        // Label
+        ctx.fillStyle = '#aaa'
+        ctx.fillText(param, 30, y)
+
+        // Stars
+        const starX = 200
+        for (let i = 1; i <= 5; i++) {
+          ctx.fillStyle = score >= i ? '#f5a623' : (score >= i - 0.5 ? '#c78a1a' : '#444')
+          ctx.font = '18px sans-serif'
+          ctx.fillText('★', starX + (i - 1) * 24, y)
+        }
+
+        // Score number
+        ctx.fillStyle = '#666'
+        ctx.font = '14px -apple-system, BlinkMacSystemFont, sans-serif'
+        ctx.fillText(score > 0 ? score.toString() : '-', starX + 130, y)
+
+        y += 36
+      })
+
+      // Progress bar
+      y += 10
+      ctx.fillStyle = '#333'
+      ctx.fillRect(30, y, width - 60, 8)
+      if (analysis) {
+        ctx.fillStyle = '#f5a623'
+        ctx.fillRect(30, y, (width - 60) * (analysis.percentage / 100), 8)
+      }
+
+      // Footer
+      y += 40
+      ctx.fillStyle = '#555'
+      ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif'
+      ctx.fillText('Made with YT Rater', 30, y)
+
+      if (analysis) {
+        ctx.fillStyle = '#666'
+        ctx.fillText(analysis.recommendation, 30, y + 20)
+      }
+
+      // Convert to blob and download/share
+      canvas.toBlob(async (blob) => {
+        if (navigator.share && navigator.canShare) {
+          const file = new File([blob], `${video.title}-rating.png`, { type: 'image/png' })
+          const shareData = { files: [file], title: `${video.title} - Rating Card` }
+          if (navigator.canShare(shareData)) {
+            try {
+              await navigator.share(shareData)
+              showToast('Shared!')
+              return
+            } catch (e) {
+              // User cancelled or share failed, fall through to download
+            }
+          }
+        }
+        // Fallback: download
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${video.title}-rating.png`
+        a.click()
+        URL.revokeObjectURL(url)
+        showToast('Card image saved!')
+      }, 'image/png')
+    }
+
+    if (images.length > 0) {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => {
+        // Draw image covering full width at top
+        const aspect = img.width / img.height
+        let drawW = width - 20
+        let drawH = drawW / aspect
+        if (drawH > imgHeight - 20) {
+          drawH = imgHeight - 20
+          drawW = drawH * aspect
+        }
+        const drawX = (width - drawW) / 2
+        const drawY = 10 + (imgHeight - 20 - drawH) / 2
+
+        // Clip rounded corners for image
+        ctx.save()
+        ctx.beginPath()
+        ctx.roundRect(10, 10, width - 20, imgHeight - 10, [16, 16, 0, 0])
+        ctx.clip()
+        ctx.drawImage(img, drawX, drawY, drawW, drawH)
+        ctx.restore()
+
+        drawContent()
+      }
+      img.onerror = () => {
+        drawContent()
+      }
+      img.src = images[0]
+    } else {
+      drawContent()
+    }
+  }
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files)
@@ -320,6 +525,63 @@ function App() {
     }
   }
 
+  // Dashboard stats
+  const getDashboardStats = () => {
+    if (videos.length === 0) return null
+
+    const ratedVideos = videos.filter(v => {
+      const vals = Object.values(v.ratings).filter(x => x > 0)
+      return vals.length > 0
+    })
+
+    if (ratedVideos.length === 0) return { totalVideos: videos.length, ratedVideos: 0 }
+
+    const averages = ratedVideos.map(v => parseFloat(getAverage(v)))
+    const overallAvg = (averages.reduce((a, b) => a + b, 0) / averages.length).toFixed(2)
+    const bestVideo = ratedVideos.reduce((a, b) => parseFloat(getAverage(b)) > parseFloat(getAverage(a)) ? b : a)
+    const worstVideo = ratedVideos.reduce((a, b) => parseFloat(getAverage(b)) < parseFloat(getAverage(a)) ? b : a)
+
+    // Per-parameter averages
+    const paramAverages = {}
+    parameters.forEach(p => {
+      const scores = videos.map(v => v.ratings[p] || 0).filter(x => x > 0)
+      if (scores.length > 0) {
+        paramAverages[p] = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2)
+      }
+    })
+
+    // Folder stats
+    const folderStats = folders.map(f => {
+      const folderVideos = videos.filter(v => v.folder === f.name)
+      const folderRated = folderVideos.filter(v => Object.values(v.ratings).some(x => x > 0))
+      const folderAvg = folderRated.length > 0
+        ? (folderRated.map(v => parseFloat(getAverage(v))).reduce((a, b) => a + b, 0) / folderRated.length).toFixed(2)
+        : '-'
+      return { name: f.name, count: folderVideos.length, avg: folderAvg }
+    })
+
+    return {
+      totalVideos: videos.length,
+      ratedVideos: ratedVideos.length,
+      overallAvg,
+      bestVideo,
+      worstVideo,
+      paramAverages,
+      folderStats
+    }
+  }
+
+  // Compare toggle
+  const toggleCompare = (videoId) => {
+    if (compareSelection.includes(videoId)) {
+      setCompareSelection(compareSelection.filter(id => id !== videoId))
+    } else if (compareSelection.length < 2) {
+      setCompareSelection([...compareSelection, videoId])
+    } else {
+      showToast('Only 2 videos can be compared')
+    }
+  }
+
   const filteredVideos = (() => {
     let list = activeFolder === 'all'
       ? videos
@@ -334,34 +596,78 @@ function App() {
       )
     }
 
+    // Sort
+    list = [...list].sort((a, b) => {
+      if (sortOrder === 'newest') return (b.id || 0) - (a.id || 0)
+      return (a.id || 0) - (b.id || 0)
+    })
+
     return list
   })()
 
   return (
     <div className="app">
       <header className="header">
-        <div className="header-left">
-          <h1>YT Rater</h1>
-          <button
-            onClick={cycleTheme}
-            className="theme-circle"
-            title="Change theme"
-            style={{ background: themes.find(t => t.id === theme)?.color }}
-          ></button>
+        <div className="header-top">
+          <div className="header-left">
+            <h1>YT Rater</h1>
+            <button
+              onClick={cycleTheme}
+              className="theme-circle"
+              title="Change theme"
+              style={{ background: themes.find(t => t.id === theme)?.color }}
+            ></button>
+          </div>
+          <div className="header-actions">
+            <button onClick={() => setShowSearch(!showSearch)} className="btn btn-secondary search-toggle">
+              {showSearch ? '✕' : '⌕'}
+            </button>
+            <button onClick={() => setShowAddFolder(true)} className="btn btn-secondary">
+              + Folder
+            </button>
+            <button onClick={() => setShowAddParam(true)} className="btn btn-secondary">
+              + Parameter
+            </button>
+            <button onClick={() => setShowAddVideo(true)} className="btn btn-primary">
+              + Video
+            </button>
+          </div>
         </div>
-        <div className="header-actions">
-          <button onClick={() => setShowSearch(!showSearch)} className="btn btn-secondary search-toggle">
-            {showSearch ? '✕' : '⌕'}
+        <div className="header-toolbar">
+          <button
+            className="btn btn-sm btn-secondary sort-btn"
+            onClick={() => setSortOrder(sortOrder === 'newest' ? 'oldest' : 'newest')}
+          >
+            {sortOrder === 'newest' ? '↓ New' : '↑ Old'}
           </button>
-          <button onClick={() => setShowAddFolder(true)} className="btn btn-secondary">
-            + Folder
+          <button
+            className="btn btn-sm btn-secondary"
+            onClick={() => setShowDashboard(true)}
+          >
+            Stats
           </button>
-          <button onClick={() => setShowAddParam(true)} className="btn btn-secondary">
-            + Parameter
+          <button
+            className={`btn btn-sm ${compareMode ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => { setCompareMode(!compareMode); setCompareSelection([]) }}
+          >
+            {compareMode ? 'Cancel' : 'Compare'}
           </button>
-          <button onClick={() => setShowAddVideo(true)} className="btn btn-primary">
-            + Video
+          <button
+            className="btn btn-sm btn-secondary view-toggle"
+            onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
+            title={viewMode === 'list' ? 'Grid view' : 'List view'}
+          >
+            {viewMode === 'list' ? '▦' : '☰'}
           </button>
+          <button onClick={exportData} className="btn btn-sm btn-secondary">Export</button>
+          <button onClick={() => importRef.current?.click()} className="btn btn-sm btn-secondary">Import</button>
+          <input
+            type="file"
+            accept=".json"
+            ref={importRef}
+            onChange={importData}
+            className="file-input-hidden"
+          />
         </div>
       </header>
 
@@ -378,6 +684,18 @@ function App() {
           />
           {searchQuery && (
             <button className="search-clear" onClick={() => setSearchQuery('')}>&times;</button>
+          )}
+        </div>
+      )}
+
+      {/* Compare bar */}
+      {compareMode && (
+        <div className="compare-bar">
+          <span>Select 2 videos to compare ({compareSelection.length}/2)</span>
+          {compareSelection.length === 2 && (
+            <button className="btn btn-primary" onClick={() => {}}>
+              View Comparison
+            </button>
           )}
         </div>
       )}
@@ -535,7 +853,7 @@ function App() {
       )}
 
       {/* Videos List */}
-      <div className="videos-grid">
+      <div className={`videos-grid ${viewMode === 'grid' ? 'grid-view' : ''}`}>
         {filteredVideos.length === 0 && (
           <div className="empty-state">
             {searchQuery ? (
@@ -618,6 +936,16 @@ function App() {
             </div>
 
             <div className="video-info">
+              {compareMode && (
+                <label className="compare-check">
+                  <input
+                    type="checkbox"
+                    checked={compareSelection.includes(video.id)}
+                    onChange={() => toggleCompare(video.id)}
+                  />
+                  <span>Select to compare</span>
+                </label>
+              )}
               <div className="video-title-section">
                 {editingTitle === video.id ? (
                   <input
@@ -774,13 +1102,248 @@ function App() {
                 )
               })()}
 
-              <button onClick={() => deleteVideo(video.id)} className="delete-btn">
-                Remove
-              </button>
+              <div className="card-actions">
+                <button onClick={() => shareCard(video)} className="share-btn">
+                  Share
+                </button>
+                <button onClick={() => deleteVideo(video.id)} className="delete-btn">
+                  Remove
+                </button>
+              </div>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Dashboard Modal */}
+      {showDashboard && (() => {
+        const stats = getDashboardStats()
+        return (
+          <div className="modal-overlay" onClick={() => setShowDashboard(false)}>
+            <div className="modal modal-wide" onClick={e => e.stopPropagation()}>
+              <h2>Dashboard</h2>
+              {!stats || stats.ratedVideos === 0 ? (
+                <p className="dashboard-empty">No rated videos yet. Rate some videos to see stats!</p>
+              ) : (
+                <div className="dashboard-content">
+                  <div className="dashboard-grid">
+                    <div className="dash-card">
+                      <span className="dash-label">Total Videos</span>
+                      <span className="dash-value">{stats.totalVideos}</span>
+                    </div>
+                    <div className="dash-card">
+                      <span className="dash-label">Rated</span>
+                      <span className="dash-value">{stats.ratedVideos}</span>
+                    </div>
+                    <div className="dash-card">
+                      <span className="dash-label">Overall Avg</span>
+                      <span className="dash-value">{stats.overallAvg}/5</span>
+                    </div>
+                  </div>
+
+                  <div className="dash-section">
+                    <h4>Best Rated</h4>
+                    <div className="dash-highlight best">
+                      {stats.bestVideo.title} — {getAverage(stats.bestVideo)}/5
+                    </div>
+                  </div>
+
+                  <div className="dash-section">
+                    <h4>Worst Rated</h4>
+                    <div className="dash-highlight weak">
+                      {stats.worstVideo.title} — {getAverage(stats.worstVideo)}/5
+                    </div>
+                  </div>
+
+                  {Object.keys(stats.paramAverages).length > 0 && (
+                    <div className="dash-section">
+                      <h4>Per Parameter Avg</h4>
+                      <div className="dash-params">
+                        {Object.entries(stats.paramAverages).sort((a, b) => b[1] - a[1]).map(([param, avg]) => (
+                          <div key={param} className="dash-param-row">
+                            <span>{param}</span>
+                            <div className="breakdown-bar-bg">
+                              <div className="breakdown-bar-fill" style={{ width: `${(avg / 5) * 100}%` }}></div>
+                            </div>
+                            <span className="dash-param-score">{avg}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {stats.folderStats.length > 0 && (
+                    <div className="dash-section">
+                      <h4>Folders</h4>
+                      <div className="dash-folders">
+                        {stats.folderStats.map(f => (
+                          <div key={f.name} className="dash-folder-row">
+                            <span className="dash-folder-name">{f.name}</span>
+                            <span className="dash-folder-count">{f.count} videos</span>
+                            <span className="dash-folder-avg">avg {f.avg}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="modal-actions">
+                <button onClick={() => setShowDashboard(false)} className="btn btn-secondary">Close</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Comparison Modal */}
+      {compareMode && compareSelection.length === 2 && (() => {
+        const videoA = videos.find(v => v.id === compareSelection[0])
+        const videoB = videos.find(v => v.id === compareSelection[1])
+        if (!videoA || !videoB) return null
+
+        return (
+          <div className="modal-overlay" onClick={() => { setCompareMode(false); setCompareSelection([]) }}>
+            <div className="modal modal-wide" onClick={e => e.stopPropagation()}>
+              <h2>Comparison</h2>
+              <div className="compare-content">
+                {/* Images row */}
+                <div className="compare-images-row">
+                  <div className="compare-img-col"></div>
+                  <div className="compare-img-col">
+                    {(() => {
+                      const imgs = (videoA.images || []).filter(Boolean)
+                      return imgs.length > 0 ? (
+                        <img src={imgs[0]} alt={videoA.title} className="compare-thumb" />
+                      ) : (
+                        <div className="compare-thumb-empty">No image</div>
+                      )
+                    })()}
+                  </div>
+                  <div className="compare-img-col">
+                    {(() => {
+                      const imgs = (videoB.images || []).filter(Boolean)
+                      return imgs.length > 0 ? (
+                        <img src={imgs[0]} alt={videoB.title} className="compare-thumb" />
+                      ) : (
+                        <div className="compare-thumb-empty">No image</div>
+                      )
+                    })()}
+                  </div>
+                </div>
+
+                <div className="compare-header-row">
+                  <div className="compare-col compare-label-col"></div>
+                  <div className="compare-col">{videoA.title}</div>
+                  <div className="compare-col">{videoB.title}</div>
+                </div>
+
+                <div className="compare-header-row">
+                  <div className="compare-col compare-label-col">Average</div>
+                  <div className="compare-col compare-score">{getAverage(videoA)}</div>
+                  <div className="compare-col compare-score">{getAverage(videoB)}</div>
+                </div>
+
+                {parameters.map(param => {
+                  const scoreA = videoA.ratings[param] || 0
+                  const scoreB = videoB.ratings[param] || 0
+                  const winner = scoreA > scoreB ? 'a' : scoreB > scoreA ? 'b' : ''
+                  const diff = Math.abs(scoreA - scoreB)
+                  return (
+                    <div key={param} className="compare-row">
+                      <div className="compare-col compare-label-col">{param}</div>
+                      <div className={`compare-col compare-score ${winner === 'a' ? 'compare-winner' : ''}`}>
+                        <div className="compare-score-cell">
+                          <div className="compare-bar-wrap">
+                            <div className="compare-bar-fill-a" style={{ width: `${(scoreA / 5) * 100}%` }}></div>
+                          </div>
+                          <span>{scoreA || '-'}</span>
+                        </div>
+                      </div>
+                      <div className={`compare-col compare-score ${winner === 'b' ? 'compare-winner' : ''}`}>
+                        <div className="compare-score-cell">
+                          <div className="compare-bar-wrap">
+                            <div className="compare-bar-fill-b" style={{ width: `${(scoreB / 5) * 100}%` }}></div>
+                          </div>
+                          <span>{scoreB || '-'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {/* Summary stats */}
+                {(() => {
+                  const analysisA = getAnalysis(videoA)
+                  const analysisB = getAnalysis(videoB)
+                  const avgA = parseFloat(getAverage(videoA))
+                  const avgB = parseFloat(getAverage(videoB))
+                  const winsA = parameters.filter(p => (videoA.ratings[p] || 0) > (videoB.ratings[p] || 0)).length
+                  const winsB = parameters.filter(p => (videoB.ratings[p] || 0) > (videoA.ratings[p] || 0)).length
+                  const ties = parameters.length - winsA - winsB
+
+                  return (
+                    <>
+                      <div className="compare-summary">
+                        <div className="compare-summary-row">
+                          <span className="compare-summary-label">Parameters Won</span>
+                          <span className={winsA > winsB ? 'compare-winner' : ''}>{winsA}</span>
+                          <span className={winsB > winsA ? 'compare-winner' : ''}>{winsB}</span>
+                        </div>
+                        {ties > 0 && (
+                          <div className="compare-summary-row">
+                            <span className="compare-summary-label">Tied</span>
+                            <span colSpan="2" className="compare-tie">{ties}</span>
+                            <span></span>
+                          </div>
+                        )}
+                        {analysisA && analysisB && (
+                          <>
+                            <div className="compare-summary-row">
+                              <span className="compare-summary-label">Score %</span>
+                              <span>{analysisA.percentage}%</span>
+                              <span>{analysisB.percentage}%</span>
+                            </div>
+                            <div className="compare-summary-row">
+                              <span className="compare-summary-label">Consistency</span>
+                              <span>{analysisA.consistency}</span>
+                              <span>{analysisB.consistency}</span>
+                            </div>
+                            <div className="compare-summary-row">
+                              <span className="compare-summary-label">Verdict</span>
+                              <span>{analysisA.verdict}</span>
+                              <span>{analysisB.verdict}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="compare-header-row compare-verdict-row">
+                        <div className="compare-col compare-label-col">Winner</div>
+                        <div className="compare-col compare-score">
+                          {avgA > avgB ? '🏆' : avgA === avgB ? '🤝' : ''}
+                        </div>
+                        <div className="compare-col compare-score">
+                          {avgB > avgA ? '🏆' : avgA === avgB ? '🤝' : ''}
+                        </div>
+                      </div>
+
+                      {avgA !== avgB && (
+                        <div className="compare-lead-note">
+                          {avgA > avgB ? videoA.title : videoB.title} leads by {Math.abs(avgA - avgB).toFixed(1)} points
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
+              </div>
+              <div className="modal-actions">
+                <button onClick={() => { setCompareMode(false); setCompareSelection([]) }} className="btn btn-secondary">Close</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Lightbox */}
       {lightbox && (() => {
