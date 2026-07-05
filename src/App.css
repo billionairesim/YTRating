@@ -230,9 +230,11 @@ html, body, #root {
   left: 0;
   right: 0;
   z-index: 50;
-  background: var(--card-bg);
+  background: var(--bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
-  padding: 14px 20px 10px;
+  padding: 0;
   transition: background 0.3s ease;
 }
 
@@ -240,16 +242,21 @@ html, body, #root {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 12px 20px;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 .header-toolbar {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 4px;
+  padding: 6px 20px 8px;
+  max-width: 900px;
+  margin: 0 auto;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 2px;
+  border-top: 1px solid var(--border);
 }
 
 .header-toolbar::-webkit-scrollbar {
@@ -257,36 +264,53 @@ html, body, #root {
 }
 
 .btn-sm {
-  padding: 6px 10px;
-  font-size: 12px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 500;
   border-radius: 6px;
   white-space: nowrap;
+  background: var(--tab-bg);
+  color: var(--text-secondary);
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-sm:hover {
+  background: var(--tab-hover);
+  color: var(--text);
+}
+
+.btn-sm.btn-primary {
+  background: var(--primary);
+  color: var(--primary-text);
 }
 
 .app {
   max-width: 900px;
   margin: 0 auto;
   padding: 32px 20px;
-  padding-top: 120px;
+  padding-top: 110px;
 }
 
 .header h1 {
-  font-size: 28px;
-  font-weight: 600;
+  font-size: 24px;
+  font-weight: 700;
   color: var(--text);
+  letter-spacing: -0.5px;
 }
 
 /* Header left */
 .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 /* Theme circle button */
 .theme-circle {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: 2px solid var(--border);
   cursor: pointer;
@@ -295,13 +319,21 @@ html, body, #root {
 }
 
 .theme-circle:hover {
-  transform: scale(1.15);
+  transform: scale(1.2);
   border-color: var(--text-muted);
 }
 
 .header-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  align-items: center;
+}
+
+.header-actions .btn {
+  padding: 8px 14px;
+  font-size: 13px;
+  border-radius: 20px;
+  font-weight: 500;
 }
 
 /* Buttons */
@@ -1259,44 +1291,35 @@ html, body, #root {
 @media (max-width: 700px) {
   .app {
     padding: 16px 12px;
-    padding-top: 130px;
-  }
-
-  .header {
-    padding: 10px 12px 8px;
+    padding-top: 115px;
   }
 
   .header-top {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
+    padding: 10px 14px;
   }
 
   .header h1 {
-    font-size: 22px;
+    font-size: 20px;
   }
 
   .header-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: 6px;
   }
 
   .header-actions .btn {
-    font-size: 13px;
-    padding: 10px 12px;
-    text-align: center;
-    justify-content: center;
+    font-size: 11px;
+    padding: 7px 10px;
+    border-radius: 16px;
   }
 
   .header-toolbar {
-    margin-top: 8px;
-    gap: 5px;
+    padding: 5px 14px 7px;
+    gap: 4px;
   }
 
   .btn-sm {
     padding: 5px 8px;
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .folders-bar {
