@@ -18,15 +18,33 @@ function App() {
     return saved ? JSON.parse(saved) : []
   })
 
+  const [parameterSets, setParameterSets] = useState(() => {
+    const saved = localStorage.getItem('yt-rater-param-sets')
+    return saved ? JSON.parse(saved) : []
+  })
+
+  const [paramSetMap, setParamSetMap] = useState(() => {
+    const saved = localStorage.getItem('yt-rater-param-set-map')
+    return saved ? JSON.parse(saved) : {}
+  })
+
   const [activeFolder, setActiveFolder] = useState('all')
   const [showAddVideo, setShowAddVideo] = useState(false)
   const [showAddParam, setShowAddParam] = useState(false)
   const [showAddFolder, setShowAddFolder] = useState(false)
+  const [showAddSet, setShowAddSet] = useState(false)
+  const [showManageSets, setShowManageSets] = useState(false)
+  const [newSetName, setNewSetName] = useState('')
+  const [newSetColor, setNewSetColor] = useState('#5c6bc0')
+  const [editingSet, setEditingSet] = useState(null)
+  const [showSetSelector, setShowSetSelector] = useState(null)
   const [videoTitle, setVideoTitle] = useState('')
   const [videoFolder, setVideoFolder] = useState('')
   const [customImages, setCustomImages] = useState([])
   const [newParam, setNewParam] = useState('')
+  const [newParamSet, setNewParamSet] = useState('')
   const [newFolderName, setNewFolderName] = useState('')
+  const [videoSelectedSets, setVideoSelectedSets] = useState([])
   const [error, setError] = useState('')
   const [editingTitle, setEditingTitle] = useState(null)
   const [expandedAnalysis, setExpandedAnalysis] = useState({})
@@ -99,6 +117,8 @@ function App() {
     const data = {
       videos,
       parameters,
+      parameterSets,
+      paramSetMap,
       folders,
       theme,
       exportedAt: new Date().toISOString()
@@ -124,6 +144,8 @@ function App() {
         const data = JSON.parse(event.target.result)
         if (data.videos) setVideos(data.videos)
         if (data.parameters) setParameters(data.parameters)
+        if (data.parameterSets) setParameterSets(data.parameterSets)
+        if (data.paramSetMap) setParamSetMap(data.paramSetMap)
         if (data.folders) setFolders(data.folders)
         if (data.theme) setTheme(data.theme)
         showToast('Data imported!')
@@ -153,6 +175,14 @@ function App() {
   }, [folders])
 
   useEffect(() => {
+    localStorage.setItem('yt-rater-param-sets', JSON.stringify(parameterSets))
+  }, [parameterSets])
+
+  useEffect(() => {
+    localStorage.setItem('yt-rater-param-set-map', JSON.stringify(paramSetMap))
+  }, [paramSetMap])
+
+  useEffect(() => {
     localStorage.setItem('yt-rater-view', viewMode)
   }, [viewMode])
 
@@ -162,9 +192,10 @@ function App() {
     const analysis = getAnalysis(video)
     const images = (video.images || []).filter(Boolean)
 
+    const visibleParams = getVisibleParams(video)
     const width = 600
     const imgHeight = images.length > 0 ? 280 : 0
-    const contentHeight = 400 + parameters.length * 36
+    const contentHeight = 400 + visibleParams.length * 36
     const height = imgHeight + contentHeight
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
@@ -205,7 +236,7 @@ function App() {
       // Ratings
       let y = startY + 110
       ctx.font = '14px -apple-system, BlinkMacSystemFont, sans-serif'
-      parameters.forEach(param => {
+      visibleParams.forEach(param => {
         const score = video.ratings[param] || 0
 
         // Label
@@ -331,9 +362,85 @@ function App() {
     setCustomImages(prev => prev.filter((_, i) => i !== index))
   }
 
+  // Parameter Set CRUD
+  const addParameterSet = () => {
+    if (!newSetName.trim()) return
+    if (parameterSets.some(s => s.name === newSetName.trim())) {
+      setError('Set already exists')
+      return
+    }
+    setParameterSets([...parameterSets, {
+      id: Date.now(),
+      name: newSetName.trim(),
+      color: newSetColor
+    }])
+    setNewSetName('')
+    setNewSetColor('#5c6bc0')
+    setShowAddSet(false)
+    setError('')
+    showToast('Parameter set created!')
+  }
+
+  const updateParameterSet = (setId, newName, newColor) => {
+    setParameterSets(parameterSets.map(s =>
+      s.id === setId ? { ...s, name: newName, color: newColor } : s
+    ))
+    setEditingSet(null)
+    showToast('Set updated!')
+  }
+
+  const deleteParameterSet = (setId) => {
+    // Remove set assignment from parameters
+    const newMap = { ...paramSetMap }
+    Object.keys(newMap).forEach(param => {
+      if (newMap[param] === setId) delete newMap[param]
+    })
+    setParamSetMap(newMap)
+
+    // Remove from videos' selectedSets
+    setVideos(videos.map(v => {
+      if (v.selectedSets) {
+        const filtered = v.selectedSets.filter(id => id !== setId)
+        return { ...v, selectedSets: filtered.length > 0 ? filtered : [] }
+      }
+      return v
+    }))
+
+    setParameterSets(parameterSets.filter(s => s.id !== setId))
+    showToast('Set deleted')
+  }
+
+  // Get parameters that belong to a specific set
+  const getParamsForSet = (setId) => {
+    return parameters.filter(p => paramSetMap[p] === setId)
+  }
+
+  // Get parameters visible for a specific video (based on its selectedSets)
+  const getVisibleParams = (video) => {
+    // If no sets exist at all, show all parameters
+    if (parameterSets.length === 0) return parameters
+
+    // If video has no selectedSets set yet (legacy video), default to all sets
+    const selectedSets = video.selectedSets && video.selectedSets.length > 0
+      ? video.selectedSets
+      : parameterSets.map(s => s.id)
+
+    return parameters.filter(p => {
+      const setId = paramSetMap[p]
+      if (!setId) return false // ungrouped params hidden when sets exist
+      return selectedSets.includes(setId)
+    })
+  }
+
   const addVideo = () => {
     if (!videoTitle.trim()) {
       setError('Please enter a title')
+      return
+    }
+
+    // If there are parameter sets, must select at least one
+    if (parameterSets.length > 0 && videoSelectedSets.length === 0) {
+      setError('Please select at least 1 parameter set')
       return
     }
 
@@ -346,12 +453,14 @@ function App() {
       images: customImages.length > 0 ? [...customImages] : [],
       folder: videoFolder || null,
       ratings,
+      selectedSets: parameterSets.length > 0 ? [...videoSelectedSets] : [],
       addedAt: new Date().toISOString()
     }])
 
     setVideoTitle('')
     setCustomImages([])
     setVideoFolder('')
+    setVideoSelectedSets([])
     setShowAddVideo(false)
     setError('')
     showToast('Video added!')
@@ -399,8 +508,18 @@ function App() {
       return
     }
 
+    if (parameterSets.length > 0 && !newParamSet) {
+      setError('Please select a parameter set')
+      return
+    }
+
     const param = newParam.trim()
     setParameters([...parameters, param])
+
+    // Assign to set if one selected
+    if (newParamSet) {
+      setParamSetMap(prev => ({ ...prev, [param]: parseInt(newParamSet) }))
+    }
 
     setVideos(videos.map(v => ({
       ...v,
@@ -408,6 +527,7 @@ function App() {
     })))
 
     setNewParam('')
+    setNewParamSet('')
     setShowAddParam(false)
     setError('')
     showToast('Parameter added!')
@@ -471,11 +591,16 @@ function App() {
       delete newRatings[param]
       return { ...v, ratings: newRatings }
     }))
+    // Clean up set map
+    const newMap = { ...paramSetMap }
+    delete newMap[param]
+    setParamSetMap(newMap)
     showToast('Parameter removed')
   }
 
   const getAverage = (video) => {
-    const values = Object.values(video.ratings)
+    const visibleParams = getVisibleParams(video)
+    const values = visibleParams.map(p => video.ratings[p] || 0)
     if (values.length === 0) return 0
     const rated = values.filter(v => v > 0)
     if (rated.length === 0) return 0
@@ -483,7 +608,10 @@ function App() {
   }
 
   const getAnalysis = (video) => {
-    const entries = Object.entries(video.ratings).filter(([, v]) => v > 0)
+    const visibleParams = getVisibleParams(video)
+    const entries = visibleParams
+      .map(p => [p, video.ratings[p] || 0])
+      .filter(([, v]) => v > 0)
     if (entries.length === 0) return null
 
     const avg = parseFloat(getAverage(video))
@@ -520,7 +648,7 @@ function App() {
 
     return {
       avg, highest, lowest, verdict, recommendation, consistency,
-      ratedCount: entries.length, totalParams: parameters.length,
+      ratedCount: entries.length, totalParams: visibleParams.length,
       totalScore, maxPossible, percentage, sorted, stdDev: stdDev.toFixed(2)
     }
   }
@@ -625,6 +753,9 @@ function App() {
             <button onClick={() => setShowAddFolder(true)} className="btn btn-secondary">
               + Folder
             </button>
+            <button onClick={() => setShowAddSet(true)} className="btn btn-secondary">
+              + Set
+            </button>
             <button onClick={() => setShowAddParam(true)} className="btn btn-secondary">
               + Parameter
             </button>
@@ -646,6 +777,14 @@ function App() {
           >
             Stats
           </button>
+          {parameterSets.length > 0 && (
+            <button
+              className="btn btn-sm btn-secondary"
+              onClick={() => setShowManageSets(true)}
+            >
+              Sets
+            </button>
+          )}
           <button
             className={`btn btn-sm ${compareMode ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => { setCompareMode(!compareMode); setCompareSelection([]) }}
@@ -735,12 +874,33 @@ function App() {
       {/* Parameters bar */}
       {parameters.length > 0 && (
         <div className="params-bar">
-          {parameters.map(p => (
-            <span key={p} className="param-chip">
-              {p}
-              <button onClick={() => deleteParameter(p)} className="chip-delete">&times;</button>
-            </span>
-          ))}
+          {parameterSets.length > 0 ? (
+            parameterSets.map(s => {
+              const setParams = getParamsForSet(s.id)
+              if (setParams.length === 0) return null
+              return (
+                <div key={s.id} className="params-bar-group">
+                  <span className="params-bar-set-label" style={{ color: s.color }}>
+                    <span className="set-color-dot-sm" style={{ background: s.color }}></span>
+                    {s.name}
+                  </span>
+                  {setParams.map(p => (
+                    <span key={p} className="param-chip">
+                      {p}
+                      <button onClick={() => deleteParameter(p)} className="chip-delete">&times;</button>
+                    </span>
+                  ))}
+                </div>
+              )
+            })
+          ) : (
+            parameters.map(p => (
+              <span key={p} className="param-chip">
+                {p}
+                <button onClick={() => deleteParameter(p)} className="chip-delete">&times;</button>
+              </span>
+            ))
+          )}
         </div>
       )}
 
@@ -771,6 +931,31 @@ function App() {
               </select>
             )}
 
+            {parameterSets.length > 0 && (
+              <div className="set-selector-section">
+                <label className="set-selector-label">Parameter Sets (select at least 1):</label>
+                <div className="set-checkboxes">
+                  {parameterSets.map(s => (
+                    <label key={s.id} className="set-checkbox-item">
+                      <input
+                        type="checkbox"
+                        checked={videoSelectedSets.includes(s.id)}
+                        onChange={() => {
+                          setVideoSelectedSets(prev =>
+                            prev.includes(s.id)
+                              ? prev.filter(id => id !== s.id)
+                              : [...prev, s.id]
+                          )
+                        }}
+                      />
+                      <span className="set-checkbox-dot" style={{ background: s.color }}></span>
+                      <span>{s.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="image-upload-section">
               {customImages.length > 0 && (
                 <div className="image-previews">
@@ -799,7 +984,7 @@ function App() {
 
             {error && <p className="error">{error}</p>}
             <div className="modal-actions">
-              <button onClick={() => { setShowAddVideo(false); setError(''); setCustomImages([]) }} className="btn btn-secondary">Cancel</button>
+              <button onClick={() => { setShowAddVideo(false); setError(''); setCustomImages([]); setVideoSelectedSets([]) }} className="btn btn-secondary">Cancel</button>
               <button onClick={addVideo} className="btn btn-primary">Add</button>
             </div>
           </div>
@@ -831,7 +1016,7 @@ function App() {
 
       {/* Add Parameter Modal */}
       {showAddParam && (
-        <div className="modal-overlay" onClick={() => { setShowAddParam(false); setError('') }}>
+        <div className="modal-overlay" onClick={() => { setShowAddParam(false); setError(''); setNewParamSet('') }}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h2>Add Rating Parameter</h2>
             <input
@@ -843,9 +1028,21 @@ function App() {
               autoFocus
               onKeyDown={e => e.key === 'Enter' && addParameter()}
             />
+            {parameterSets.length > 0 && (
+              <select
+                value={newParamSet}
+                onChange={e => setNewParamSet(e.target.value)}
+                className="modal-input modal-select"
+              >
+                <option value="">Select parameter set...</option>
+                {parameterSets.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            )}
             {error && <p className="error">{error}</p>}
             <div className="modal-actions">
-              <button onClick={() => { setShowAddParam(false); setError('') }} className="btn btn-secondary">Cancel</button>
+              <button onClick={() => { setShowAddParam(false); setError(''); setNewParamSet('') }} className="btn btn-secondary">Cancel</button>
               <button onClick={addParameter} className="btn btn-primary">Add</button>
             </div>
           </div>
@@ -983,39 +1180,98 @@ function App() {
               )}
 
               <div className="ratings">
-                {parameters.map(param => (
-                  <div key={param} className="rating-row">
-                    <label>{param}</label>
-                    <div className="rating-stars">
-                      {[1, 2, 3, 4, 5].map(val => {
-                        const rating = video.ratings[param] || 0
-                        const isFull = rating >= val
-                        const isHalf = !isFull && rating >= val - 0.5
+                {(() => {
+                  const visibleParams = getVisibleParams(video)
+                  // Group by set
+                  if (parameterSets.length > 0) {
+                    const grouped = {}
+                    visibleParams.forEach(p => {
+                      const setId = paramSetMap[p]
+                      if (!grouped[setId]) grouped[setId] = []
+                      grouped[setId].push(p)
+                    })
 
-                        return (
-                          <button
-                            key={val}
-                            className="star-btn"
-                            onClick={(e) => {
-                              const rect = e.currentTarget.getBoundingClientRect()
-                              const clickX = e.clientX - rect.left
-                              const isLeftHalf = clickX < rect.width / 2
-                              const newVal = isLeftHalf ? val - 0.5 : val
-                              updateRating(video.id, param, rating === newVal ? 0 : newVal)
-                            }}
-                          >
-                            <span className={`star ${isFull ? 'full' : ''} ${isHalf ? 'half' : ''}`}>
-                              &#9733;
-                            </span>
-                          </button>
-                        )
-                      })}
-                      <span className="rating-value">
-                        {video.ratings[param] || '-'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                    return Object.entries(grouped).map(([setId, params]) => {
+                      const set = parameterSets.find(s => s.id === parseInt(setId))
+                      return (
+                        <div key={setId} className="param-set-group">
+                          {set && (
+                            <div className="param-set-header" style={{ borderLeftColor: set.color }}>
+                              <span className="param-set-dot" style={{ background: set.color }}></span>
+                              {set.name}
+                            </div>
+                          )}
+                          {params.map(param => (
+                            <div key={param} className="rating-row">
+                              <label>{param}</label>
+                              <div className="rating-stars">
+                                {[1, 2, 3, 4, 5].map(val => {
+                                  const rating = video.ratings[param] || 0
+                                  const isFull = rating >= val
+                                  const isHalf = !isFull && rating >= val - 0.5
+                                  return (
+                                    <button
+                                      key={val}
+                                      className="star-btn"
+                                      onClick={(e) => {
+                                        const rect = e.currentTarget.getBoundingClientRect()
+                                        const clickX = e.clientX - rect.left
+                                        const isLeftHalf = clickX < rect.width / 2
+                                        const newVal = isLeftHalf ? val - 0.5 : val
+                                        updateRating(video.id, param, rating === newVal ? 0 : newVal)
+                                      }}
+                                    >
+                                      <span className={`star ${isFull ? 'full' : ''} ${isHalf ? 'half' : ''}`}>
+                                        &#9733;
+                                      </span>
+                                    </button>
+                                  )
+                                })}
+                                <span className="rating-value">
+                                  {video.ratings[param] || '-'}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    })
+                  } else {
+                    // No sets — show all parameters flat
+                    return visibleParams.map(param => (
+                      <div key={param} className="rating-row">
+                        <label>{param}</label>
+                        <div className="rating-stars">
+                          {[1, 2, 3, 4, 5].map(val => {
+                            const rating = video.ratings[param] || 0
+                            const isFull = rating >= val
+                            const isHalf = !isFull && rating >= val - 0.5
+                            return (
+                              <button
+                                key={val}
+                                className="star-btn"
+                                onClick={(e) => {
+                                  const rect = e.currentTarget.getBoundingClientRect()
+                                  const clickX = e.clientX - rect.left
+                                  const isLeftHalf = clickX < rect.width / 2
+                                  const newVal = isLeftHalf ? val - 0.5 : val
+                                  updateRating(video.id, param, rating === newVal ? 0 : newVal)
+                                }}
+                              >
+                                <span className={`star ${isFull ? 'full' : ''} ${isHalf ? 'half' : ''}`}>
+                                  &#9733;
+                                </span>
+                              </button>
+                            )
+                          })}
+                          <span className="rating-value">
+                            {video.ratings[param] || '-'}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  }
+                })()}
               </div>
 
               {getAnalysis(video) && (() => {
@@ -1103,6 +1359,11 @@ function App() {
               })()}
 
               <div className="card-actions">
+                {parameterSets.length > 0 && (
+                  <button onClick={() => setShowSetSelector(video.id)} className="sets-btn">
+                    Sets ({(video.selectedSets || []).length})
+                  </button>
+                )}
                 <button onClick={() => shareCard(video)} className="share-btn">
                   Share
                 </button>
@@ -1339,6 +1600,146 @@ function App() {
               </div>
               <div className="modal-actions">
                 <button onClick={() => { setCompareMode(false); setCompareSelection([]) }} className="btn btn-secondary">Close</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Add Parameter Set Modal */}
+      {showAddSet && (
+        <div className="modal-overlay" onClick={() => { setShowAddSet(false); setError('') }}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2>Create Parameter Set</h2>
+            <input
+              type="text"
+              placeholder="Set name (e.g. Visual Quality)"
+              value={newSetName}
+              onChange={e => setNewSetName(e.target.value)}
+              className="modal-input"
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && addParameterSet()}
+            />
+            <div className="color-picker-row">
+              <label className="color-label">Color:</label>
+              <div className="color-options">
+                {['#5c6bc0', '#f5a623', '#2e7d32', '#e53935', '#00897b', '#8e24aa', '#f57c00', '#1565c0'].map(c => (
+                  <button
+                    key={c}
+                    className={`color-dot ${newSetColor === c ? 'active' : ''}`}
+                    style={{ background: c }}
+                    onClick={() => setNewSetColor(c)}
+                  ></button>
+                ))}
+              </div>
+            </div>
+            {error && <p className="error">{error}</p>}
+            <div className="modal-actions">
+              <button onClick={() => { setShowAddSet(false); setError('') }} className="btn btn-secondary">Cancel</button>
+              <button onClick={addParameterSet} className="btn btn-primary">Create</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Parameter Sets Modal */}
+      {showManageSets && (
+        <div className="modal-overlay" onClick={() => { setShowManageSets(false); setEditingSet(null) }}>
+          <div className="modal modal-wide" onClick={e => e.stopPropagation()}>
+            <h2>Parameter Sets</h2>
+            <div className="manage-sets-list">
+              {parameterSets.map(s => (
+                <div key={s.id} className="manage-set-item">
+                  {editingSet === s.id ? (
+                    <div className="manage-set-edit">
+                      <input
+                        type="text"
+                        className="modal-input"
+                        defaultValue={s.name}
+                        autoFocus
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') updateParameterSet(s.id, e.target.value, s.color)
+                          if (e.key === 'Escape') setEditingSet(null)
+                        }}
+                        onBlur={e => updateParameterSet(s.id, e.target.value, s.color)}
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="manage-set-info">
+                        <span className="set-color-dot" style={{ background: s.color }}></span>
+                        <span className="manage-set-name">{s.name}</span>
+                        <span className="manage-set-count">
+                          {getParamsForSet(s.id).length} params
+                        </span>
+                      </div>
+                      <div className="manage-set-actions">
+                        <button onClick={() => setEditingSet(s.id)} className="manage-set-btn">Edit</button>
+                        <button onClick={() => deleteParameterSet(s.id)} className="manage-set-btn danger">Delete</button>
+                      </div>
+                    </>
+                  )}
+                  {editingSet !== s.id && getParamsForSet(s.id).length > 0 && (
+                    <div className="manage-set-params">
+                      {getParamsForSet(s.id).map(p => (
+                        <span key={p} className="manage-param-chip">{p}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {parameterSets.length === 0 && (
+                <p className="dashboard-empty">No parameter sets yet. Create one with "+ Set".</p>
+              )}
+            </div>
+            <div className="modal-actions">
+              <button onClick={() => { setShowManageSets(false); setEditingSet(null) }} className="btn btn-secondary">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Per-Video Set Selector Modal */}
+      {showSetSelector && (() => {
+        const video = videos.find(v => v.id === showSetSelector)
+        if (!video) return null
+        const currentSets = video.selectedSets || []
+
+        const toggleVideoSet = (setId) => {
+          const isSelected = currentSets.includes(setId)
+          if (isSelected && currentSets.length <= 1) {
+            showToast('Must keep at least 1 set')
+            return
+          }
+          const newSets = isSelected
+            ? currentSets.filter(id => id !== setId)
+            : [...currentSets, setId]
+          setVideos(videos.map(v =>
+            v.id === showSetSelector ? { ...v, selectedSets: newSets } : v
+          ))
+        }
+
+        return (
+          <div className="modal-overlay" onClick={() => setShowSetSelector(null)}>
+            <div className="modal" onClick={e => e.stopPropagation()}>
+              <h2>Select Sets for "{video.title}"</h2>
+              <p className="set-selector-hint">Only parameters from selected sets will be shown and rated.</p>
+              <div className="set-checkboxes">
+                {parameterSets.map(s => (
+                  <label key={s.id} className="set-checkbox-item">
+                    <input
+                      type="checkbox"
+                      checked={currentSets.includes(s.id)}
+                      onChange={() => toggleVideoSet(s.id)}
+                    />
+                    <span className="set-checkbox-dot" style={{ background: s.color }}></span>
+                    <span>{s.name}</span>
+                    <span className="set-checkbox-count">({getParamsForSet(s.id).length} params)</span>
+                  </label>
+                ))}
+              </div>
+              <div className="modal-actions">
+                <button onClick={() => setShowSetSelector(null)} className="btn btn-primary">Done</button>
               </div>
             </div>
           </div>

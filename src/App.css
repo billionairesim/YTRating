@@ -2140,3 +2140,310 @@ html, body, #root {
 .grid-view .delete-btn {
   font-size: 11px;
 }
+
+/* ====== FEATURE: Parameter Sets ====== */
+
+/* Color picker in create set modal */
+.color-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.color-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.color-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.color-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.color-dot:hover {
+  transform: scale(1.2);
+}
+
+.color-dot.active {
+  border-color: var(--text);
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text-muted);
+}
+
+/* Set selector in add video modal */
+.set-selector-section {
+  margin-bottom: 12px;
+}
+
+.set-selector-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.set-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.set-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--analysis-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.set-checkbox-item:hover {
+  background: var(--tab-hover);
+  border-color: var(--text-muted);
+}
+
+.set-checkbox-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.set-checkbox-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.set-checkbox-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.set-selector-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+/* Parameter set group in video card */
+.param-set-group {
+  margin-bottom: 10px;
+}
+
+.param-set-group:last-child {
+  margin-bottom: 0;
+}
+
+.param-set-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  padding-left: 8px;
+  border-left: 3px solid;
+}
+
+.param-set-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Sets button in card actions */
+.sets-btn {
+  background: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 6px 0;
+  text-align: left;
+  transition: color 0.15s;
+  border: none;
+  cursor: pointer;
+}
+
+.sets-btn:hover {
+  color: var(--primary);
+}
+
+/* Manage sets modal */
+.manage-sets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.manage-set-item {
+  padding: 12px 14px;
+  background: var(--analysis-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.manage-set-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.set-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.manage-set-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  flex: 1;
+}
+
+.manage-set-count {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.manage-set-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.manage-set-btn {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.manage-set-btn:hover {
+  background: var(--tab-hover);
+  color: var(--text);
+}
+
+.manage-set-btn.danger:hover {
+  color: #e53935;
+}
+
+.manage-set-edit .modal-input {
+  margin-bottom: 0;
+}
+
+.manage-set-params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.manage-param-chip {
+  font-size: 11px;
+  padding: 3px 8px;
+  background: var(--tab-bg);
+  border-radius: 10px;
+  color: var(--text-secondary);
+}
+
+/* Params bar grouped by set */
+.params-bar-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.params-bar-set-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-right: 4px;
+}
+
+.set-color-dot-sm {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* Grid view adjustments for sets */
+.grid-view .param-set-header {
+  font-size: 10px;
+  margin-bottom: 4px;
+}
+
+.grid-view .param-set-group {
+  margin-bottom: 6px;
+}
+
+.grid-view .sets-btn {
+  font-size: 11px;
+}
+
+/* Mobile adjustments for sets */
+@media (max-width: 700px) {
+  .set-checkbox-item {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .color-dot {
+    width: 24px;
+    height: 24px;
+  }
+
+  .param-set-header {
+    font-size: 10px;
+  }
+
+  .manage-set-info {
+    flex-wrap: wrap;
+  }
+
+  .manage-set-actions {
+    margin-left: 0;
+    margin-top: 6px;
+  }
+}
