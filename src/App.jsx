@@ -889,38 +889,6 @@ function App() {
         )}
       </div>
 
-      {/* Parameters bar */}
-      {parameters.length > 0 && (
-        <div className="params-bar">
-          {parameterSets.length > 0 ? (
-            getAllSetsWithUnassigned().map(s => {
-              const setParams = getParamsForSet(s.id)
-              if (setParams.length === 0) return null
-              return (
-                <div key={s.id} className="params-bar-group">
-                  <span className="params-bar-set-label" style={{ color: s.color }}>
-                    <span className="set-color-dot-sm" style={{ background: s.color }}></span>
-                    {s.name}
-                  </span>
-                  {setParams.map(p => (
-                    <span key={p} className="param-chip">
-                      {p}
-                      <button onClick={() => deleteParameter(p)} className="chip-delete">&times;</button>
-                    </span>
-                  ))}
-                </div>
-              )
-            })
-          ) : (
-            parameters.map(p => (
-              <span key={p} className="param-chip">
-                {p}
-                <button onClick={() => deleteParameter(p)} className="chip-delete">&times;</button>
-              </span>
-            ))
-          )}
-        </div>
-      )}
 
       {/* Add Video Modal */}
       {showAddVideo && (
