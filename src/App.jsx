@@ -410,8 +410,24 @@ function App() {
     showToast('Set deleted')
   }
 
+  // Special "Unassigned" set ID for parameters without a set
+  const UNASSIGNED_SET_ID = -1
+  const UNASSIGNED_SET = { id: UNASSIGNED_SET_ID, name: 'Unassigned', color: '#888888' }
+
+  // Get all sets including the virtual "Unassigned" set if there are unassigned params
+  const getAllSetsWithUnassigned = () => {
+    const unassignedParams = parameters.filter(p => !paramSetMap[p])
+    if (unassignedParams.length > 0) {
+      return [...parameterSets, UNASSIGNED_SET]
+    }
+    return parameterSets
+  }
+
   // Get parameters that belong to a specific set
   const getParamsForSet = (setId) => {
+    if (setId === UNASSIGNED_SET_ID) {
+      return parameters.filter(p => !paramSetMap[p])
+    }
     return parameters.filter(p => paramSetMap[p] === setId)
   }
 
@@ -420,15 +436,17 @@ function App() {
     // If no sets exist at all, show all parameters
     if (parameterSets.length === 0) return parameters
 
-    // If video has no selectedSets set yet (legacy video), default to all sets
+    // If video has no selectedSets set yet (legacy video), default to all sets including unassigned
+    const allSetIds = getAllSetsWithUnassigned().map(s => s.id)
     const selectedSets = video.selectedSets && video.selectedSets.length > 0
       ? video.selectedSets
-      : parameterSets.map(s => s.id)
+      : allSetIds
 
     return parameters.filter(p => {
       const setId = paramSetMap[p]
-      if (!setId) return false // ungrouped params hidden when sets exist
-      return selectedSets.includes(setId)
+      // If param has no set, it belongs to "Unassigned"
+      const effectiveSetId = setId || UNASSIGNED_SET_ID
+      return selectedSets.includes(effectiveSetId)
     })
   }
 
@@ -875,7 +893,7 @@ function App() {
       {parameters.length > 0 && (
         <div className="params-bar">
           {parameterSets.length > 0 ? (
-            parameterSets.map(s => {
+            getAllSetsWithUnassigned().map(s => {
               const setParams = getParamsForSet(s.id)
               if (setParams.length === 0) return null
               return (
@@ -935,7 +953,7 @@ function App() {
               <div className="set-selector-section">
                 <label className="set-selector-label">Parameter Sets (select at least 1):</label>
                 <div className="set-checkboxes">
-                  {parameterSets.map(s => (
+                  {getAllSetsWithUnassigned().map(s => (
                     <label key={s.id} className="set-checkbox-item">
                       <input
                         type="checkbox"
@@ -950,6 +968,7 @@ function App() {
                       />
                       <span className="set-checkbox-dot" style={{ background: s.color }}></span>
                       <span>{s.name}</span>
+                      <span className="set-checkbox-count">({getParamsForSet(s.id).length} params)</span>
                     </label>
                   ))}
                 </div>
@@ -1186,13 +1205,16 @@ function App() {
                   if (parameterSets.length > 0) {
                     const grouped = {}
                     visibleParams.forEach(p => {
-                      const setId = paramSetMap[p]
+                      const setId = paramSetMap[p] || UNASSIGNED_SET_ID
                       if (!grouped[setId]) grouped[setId] = []
                       grouped[setId].push(p)
                     })
 
                     return Object.entries(grouped).map(([setId, params]) => {
-                      const set = parameterSets.find(s => s.id === parseInt(setId))
+                      const numId = parseInt(setId)
+                      const set = numId === UNASSIGNED_SET_ID
+                        ? UNASSIGNED_SET
+                        : parameterSets.find(s => s.id === numId)
                       return (
                         <div key={setId} className="param-set-group">
                           {set && (
@@ -1688,7 +1710,26 @@ function App() {
                   )}
                 </div>
               ))}
-              {parameterSets.length === 0 && (
+              {/* Show Unassigned set if there are unassigned params */}
+              {getParamsForSet(UNASSIGNED_SET_ID).length > 0 && (
+                <div className="manage-set-item unassigned-set">
+                  <div className="manage-set-info">
+                    <span className="set-color-dot" style={{ background: UNASSIGNED_SET.color }}></span>
+                    <span className="manage-set-name">{UNASSIGNED_SET.name}</span>
+                    <span className="manage-set-count">
+                      {getParamsForSet(UNASSIGNED_SET_ID).length} params
+                    </span>
+                  </div>
+                  {getParamsForSet(UNASSIGNED_SET_ID).length > 0 && (
+                    <div className="manage-set-params">
+                      {getParamsForSet(UNASSIGNED_SET_ID).map(p => (
+                        <span key={p} className="manage-param-chip">{p}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {parameterSets.length === 0 && getParamsForSet(UNASSIGNED_SET_ID).length === 0 && (
                 <p className="dashboard-empty">No parameter sets yet. Create one with "+ Set".</p>
               )}
             </div>
@@ -1725,7 +1766,7 @@ function App() {
               <h2>Select Sets for "{video.title}"</h2>
               <p className="set-selector-hint">Only parameters from selected sets will be shown and rated.</p>
               <div className="set-checkboxes">
-                {parameterSets.map(s => (
+                {getAllSetsWithUnassigned().map(s => (
                   <label key={s.id} className="set-checkbox-item">
                     <input
                       type="checkbox"
