@@ -503,6 +503,9 @@ html, body, #root {
   align-items: center;
   justify-content: center;
   z-index: 100;
+  padding: 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal {
@@ -511,6 +514,8 @@ html, body, #root {
   padding: 32px;
   width: 100%;
   max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   color: var(--text);
 }
@@ -543,6 +548,11 @@ html, body, #root {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 8px;
+  position: sticky;
+  bottom: 0;
+  background: var(--card-bg);
+  padding: 12px 0 0;
+  z-index: 2;
 }
 
 .error {
@@ -1494,9 +1504,21 @@ html, body, #root {
   }
 
   .modal {
-    margin: 16px;
+    margin: 0;
     padding: 24px 20px;
     max-width: calc(100vw - 32px);
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .modal-wide {
+    max-height: 85vh;
+  }
+
+  .modal-overlay {
+    padding: 12px;
+    align-items: flex-start;
+    padding-top: 40px;
   }
 
   .search-bar {

@@ -1383,7 +1383,7 @@ function App() {
               <div className="card-actions">
                 {parameterSets.length > 0 && (
                   <button onClick={() => setShowSetSelector(video.id)} className="sets-btn">
-                    Sets ({(video.selectedSets || []).length})
+                    Sets ({(video.selectedSets && video.selectedSets.length > 0) ? video.selectedSets.length : getAllSetsWithUnassigned().length})
                   </button>
                 )}
                 <button onClick={() => shareCard(video)} className="share-btn">
@@ -1744,7 +1744,11 @@ function App() {
       {showSetSelector && (() => {
         const video = videos.find(v => v.id === showSetSelector)
         if (!video) return null
-        const currentSets = video.selectedSets || []
+        // Default to all sets (including Unassigned) if video has none assigned yet
+        const allSetIds = getAllSetsWithUnassigned().map(s => s.id)
+        const currentSets = video.selectedSets && video.selectedSets.length > 0
+          ? video.selectedSets
+          : allSetIds
 
         const toggleVideoSet = (setId) => {
           const isSelected = currentSets.includes(setId)
